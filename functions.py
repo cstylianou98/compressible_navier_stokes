@@ -499,7 +499,7 @@ def plot_entropy_res(variables_tuple, config):
     plt.figure()
     plt.xlabel('x')
     plt.ylabel(r'$\nu_{e}$')
-    plt.title('Entropy Residual Timestep 1')
+    plt.title('Viscosity Timestep 1')
     timestep = 1
     plt.plot(config['xnode'], variables_tuple[5][:, timestep])
     plt.savefig(f"./{config['folder_path']}/{config['method_file_name']}_entropy_res_timestep={timestep}.png")
