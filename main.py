@@ -318,25 +318,25 @@ def run_simulation(config):
             U_temp = [config['U'][0][:, n], config['U'][1][:, n], config['U'][2][:, n]]
 
             # k1 step
-            M_tuple, F_tuple, viscosity_term_tuple = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
-            k1 = tuple(config['dt'] * solve(M_tuple[var],  F_tuple[var] + viscosity_term_tuple) for var in range(len(U_temp)))
+            M_tuple, F_tuple = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
+            k1 = tuple(config['dt'] * solve(M_tuple[var],  F_tuple[var]) for var in range(len(U_temp)))
 
             # k2 step
             U_temp = [config['U'][var][:, n] + 0.5 * k1[var] for var in range(len(U_temp))]
             U_temp = apply_boundary_conditions(U_temp, config['numnp'])
-            M_tuple, F_tuple, viscosity_term_tuple = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
+            M_tuple, F_tuple = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
             k2 = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
 
             # k3 step
             U_temp = [config['U'][var][:, n] + 0.5 * k2[var] for var in range(len(U_temp))]
             U_temp = apply_boundary_conditions(U_temp, config['numnp'])
-            M_tuple, F_tuple, viscosity_term_tuple = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
+            M_tuple, F_tuple = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
             k3 = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
 
             # k4 step
             U_temp = [config['U'][var][:, n] + k3[var] for var in range(len(U_temp))]
             U_temp = apply_boundary_conditions(U_temp, config['numnp'])
-            M_tuple, F_tuple, viscosity_term_tuple = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
+            M_tuple, F_tuple = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
             k4 = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
 
             # Update solution

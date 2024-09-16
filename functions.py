@@ -362,9 +362,9 @@ def assemble_TG_two_step(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt
             F_m[isp] += w_ig * (Nx * F_m_inter)
             F_rho_E[isp] += w_ig * (Nx * F_rho_E_inter)
 
-            viscosity_term_rho[np.ix_(isp, isp)] += viscosity_e_gp * w_ig * np.outer(Nx, Nx)
-            viscosity_term_m[np.ix_(isp, isp)] += viscosity_e_gp * w_ig * np.outer(Nx, Nx)
-            viscosity_term_rho_E[np.ix_(isp, isp)] += viscosity_e_gp * w_ig * np.outer(Nx, Nx)
+            # viscosity_term_rho[np.ix_(isp, isp)] += viscosity_e_gp * w_ig * np.outer(Nx, Nx)
+            # viscosity_term_m[np.ix_(isp, isp)] += viscosity_e_gp * w_ig * np.outer(Nx, Nx)
+            # viscosity_term_rho_E[np.ix_(isp, isp)] += viscosity_e_gp * w_ig * np.outer(Nx, Nx)
 
 
     M_rho[0,0] = 1
@@ -375,7 +375,7 @@ def assemble_TG_two_step(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt
     M_m[-1, -1] = 1
     M_rho_E[-1, -1] = 1  
 
-    return M, F, viscosity_term
+    return M, F
 
 def assemble_entropy_res(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma):
     '''
@@ -498,9 +498,10 @@ def SodShockAnalytic(config, t_end):
 def plot_entropy_res(variables_tuple, config):
     plt.figure()
     plt.xlabel('x')
-    plt.ylabel(r'$\nu_h$')
-    timestep = 0
-    plt.plot(config['xnode'], variables_tuple[5][:, config['nstep']])
+    plt.ylabel(r'$\nabla Q_{gp}$')
+    plt.title('Entropy Residual Timestep 1')
+    timestep = 1
+    plt.plot(config['xnode'], variables_tuple[4][:, timestep])
     plt.savefig(f"./{config['folder_path']}/{config['method_file_name']}_entropy_res_timestep={timestep}.png")
 
 def plot_solution(t_end, variables_tuple , config, analytic, rho_energy_analytic):

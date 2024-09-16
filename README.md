@@ -33,6 +33,15 @@ $$
 \nabla Q_{gp} = N_x \cdot Q_{el}
 $$
 
+The plot show how at the first timestep (after timestep 0..) there is jump of the entropy residual corresponding to the initial shock of the shock tube problem.
+
+<br>
+<div>
+    <img src="RK4_TG2_two_step_EV/entropy_res_plot" alt="Entropy Residual Graph at Timestep 1" style="display: block; margin: 0 auto; width: 60%;">
+</div>
+<br>
+
+
 The entropy itself is also calculated at the gaussian point using the shape function:
 
 $$
@@ -44,4 +53,6 @@ With this information we can calculate a viscosity given by:
 $$
 \nu_e = \frac{h^2 * \nabla Q}{|\max(\eta)-\min(\eta)|}    
 $$
+
+The plot of the viscosity calculated is:
 
