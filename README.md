@@ -58,6 +58,6 @@ The plot of the viscosity calculated is:
 
 <br>
 <div>
-    <img src="./RK4_TG2_two_step_EV/viscosity_e.png" alt="Viscosity Graph at Timestep 1" style="display: block; margin: 0 auto; width: 60%;">
+    <img src="./RK4_TG2_two_step_EV/viscosity_e_plot.png" alt="Viscosity Graph at Timestep 1" style="display: block; margin: 0 auto; width: 60%;">
 </div>
 <br>
