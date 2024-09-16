@@ -18,7 +18,13 @@ $$
 The entropy flux at the element is taken as:
 
 $$
-Q_{el} = u \eta_{el}
+Q_{el} = u_{el} \eta_{el}
+$$
+
+Where:
+
+$$
+u_{el} = m/\rho
 $$
 
 The entropy residual is then taken at the gaussian point using the derivative of the shape function as:
@@ -30,7 +36,7 @@ $$
 The entropy itself is also calculated at the gaussian point using the shape function:
 
 $$
-\eta_{gp} = N \codt \eta_{el}
+\eta_{gp} = N \cdot \eta_{el}
 $$
 
 With this information we can calculate a viscosity given by:
