@@ -37,7 +37,7 @@ The plot show how at the first timestep (after timestep 0..) there is jump of th
 
 <br>
 <div>
-    <img src="RK4_TG2_two_step_EV/entropy_res_plot" alt="Entropy Residual Graph at Timestep 1" style="display: block; margin: 0 auto; width: 60%;">
+    <img src="./RK4_TG2_two_step_EV/entropy_res_plot.png" alt="Entropy Residual Graph at Timestep 1" style="display: block; margin: 0 auto; width: 60%;">
 </div>
 <br>
 
