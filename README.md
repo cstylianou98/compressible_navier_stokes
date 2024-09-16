@@ -61,3 +61,17 @@ The plot of the viscosity calculated is:
     <img src="./RK4_TG2_two_step_EV/viscosity_e_plot.png" alt="Viscosity Graph at Timestep 1" style="display: block; margin: 0 auto; width: 60%;">
 </div>
 <br>
+
+Now adding the viscosity term calculated to our FEM formulation:
+
+$$
+\int (\frac{\partial U}{\partial t} + \frac{\partial F}{\partial x}) w + \nu_e \int \frac{\partial U}{\partial x} \frac{\partial w}{\partial x} 
+$$
+
+$$
+\int \frac{\partial U}{\partial t} w \cancel{\left[w F \right]} - \int F w_x + \int \nu_e \frac{\partial u}{\partial x} \frac{\partial w}{\partial x} = 0
+$$
+
+$$
+\sum \int N_A N_B \frac{\partial U}{\partial t} - \sum \int F_{gp} \frac{\partial N_A}{\partial x} + \sum \int \nu_e \frac{\partial N_B}{\partial x} \frac{\partial N_A}{\partial x} = 0
+$$
