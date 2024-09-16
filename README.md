@@ -69,7 +69,7 @@ $$
 $$
 
 $$
-\int \frac{\partial U}{\partial t} w \cancel{\left[w F \right]} - \int F w_x + \int \nu_e \frac{\partial u}{\partial x} \frac{\partial w}{\partial x} = 0
+\int \frac{\partial U}{\partial t} w - \int F w_x + \int \nu_e \frac{\partial u}{\partial x} \frac{\partial w}{\partial x} = 0
 $$
 
 $$
