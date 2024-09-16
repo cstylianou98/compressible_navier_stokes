@@ -25,7 +25,7 @@ def configure_simulation():
           "2. Taylor Galerkin (TG2) One-Step \n"
           "3. Taylor Galerkin (TG2) Two-Step \n"
           "4. RK4 with Taylor Galerkin (TG2) Two-Step \n"
-          " 5. RK4 with Taylor Galerkin Two-Step and Entropy Viscosity \n"
+          "5. RK4 with Taylor Galerkin Two-Step and Entropy Viscosity \n"
           "\nType your choice here -----> "
           ))
      return t_end, stabilization_choice
