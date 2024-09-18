@@ -304,10 +304,10 @@ def assemble_TG_two_step(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt
     F_rho_E = np.zeros(numnp)
     F = (F_rho, F_m, F_rho_E)
 
-    viscosity_term_rho = np.zeros((numnp, numnp))
-    viscosity_term_m = np.zeros((numnp, numnp))
-    viscosity_term_rho_E = np.zeros((numnp, numnp))
-    viscosity_term = (viscosity_term_rho, viscosity_term_m, viscosity_term_rho_E)
+    entropy = np.zeros((numnp, numnp))
+    entropy_flux = np.zeros((numnp, numnp))
+    entropy_res = np.zeros((numnp, numnp))
+    viscosity_e = np.zeros((numnp, numnp))
 
     for i in range(numel):
         h = xnode[i + 1] - xnode[i]
@@ -326,7 +326,9 @@ def assemble_TG_two_step(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt
         F_m_el = m_el**2/rho_el + p_el
         F_rho_E_el = (m_el * (rho_E_el + p_el)/ rho_el)
 
-        viscosity_e_el = viscosity_e[isp]
+        u_el = m_el/rho_el
+        entropy_el = rho_el/(gamma-1) * np.log(p_el/rho_el**gamma)
+        entropy_flux_el = entropy_el * u_el
 
         for ig in range(ngaus):
             N = N_mef[ig, :]
@@ -350,9 +352,10 @@ def assemble_TG_two_step(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt
             F_rho_inter = m_inter
             F_m_inter = m_inter**2/ rho_inter + p_inter
             F_rho_E_inter = (m_inter * (rho_E_inter + p_inter)/ rho_inter)
-
-            viscosity_e_gp = np.dot(N, viscosity_e_el)
-
+            
+            entropy_gp = np.dot(N, entropy_el)
+            entropy_flux_gp = np.dot(N, entropy_flux_el)
+            entropy_flux_gpx = np.dot(Nx, entropy_flux_el)
 
             M_rho[np.ix_(isp, isp)] += w_ig * np.outer(N, N)
             M_m[np.ix_(isp, isp)] += w_ig * np.outer(N, N)
@@ -362,10 +365,10 @@ def assemble_TG_two_step(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt
             F_m[isp] += w_ig * (Nx * F_m_inter)
             F_rho_E[isp] += w_ig * (Nx * F_rho_E_inter)
 
-            # viscosity_term_rho[np.ix_(isp, isp)] += viscosity_e_gp * w_ig * np.outer(Nx, Nx)
-            # viscosity_term_m[np.ix_(isp, isp)] += viscosity_e_gp * w_ig * np.outer(Nx, Nx)
-            # viscosity_term_rho_E[np.ix_(isp, isp)] += viscosity_e_gp * w_ig * np.outer(Nx, Nx)
-
+            entropy[isp] += w_ig * entropy_gp 
+            entropy_flux[isp] += w_ig * entropy_flux_gp
+            entropy_res[isp] += w_ig * entropy_flux_gpx
+            
 
     M_rho[0,0] = 1
     M_m[0,0] = 1
@@ -375,7 +378,10 @@ def assemble_TG_two_step(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt
     M_m[-1, -1] = 1
     M_rho_E[-1, -1] = 1  
 
-    return M, F
+    viscosity_e = np.abs((h**2 * entropy_res)/np.abs((np.max(entropy)-np.min(entropy))))
+
+
+    return M, F, entropy, entropy_flux, entropy_res, viscosity_e
 
 def assemble_entropy_res(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma):
     '''
@@ -424,14 +430,12 @@ def assemble_entropy_res(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma):
 
             entropy_res[isp] += np.abs(w_ig * entropy_res_gp)
             entropy[isp] +=  w_ig * entropy_gp 
-        
+    
+
     viscosity_e = (h**2 * entropy_res)/np.abs((np.max(entropy)-np.min(entropy)))
     print(viscosity_e.shape)
 
     return entropy_res, viscosity_e
-
-
-
 
 ## ANALYTIC CALCULATION FUNCTIONS
 def f(P, pL, pR, cL, cR, gamma):
@@ -496,54 +500,86 @@ def SodShockAnalytic(config, t_end):
 
 ## Plotting Functions
 def plot_entropy_res(variables_tuple, config):
-    plt.figure()
-    plt.xlabel('x')
-    plt.ylabel(r'$\nu_{e}$')
-    plt.title('Viscosity Timestep 1')
-    timestep = 1
-    plt.plot(config['xnode'], variables_tuple[5][:, timestep])
-    plt.savefig(f"./{config['folder_path']}/{config['method_file_name']}_entropy_res_timestep={timestep}.png")
+    # Create a figure with two subplots
+    fig, ax = plt.subplots(2, 2, figsize=(8, 8))
+
+    # Entropy
+    ax[0, 0].set_xlabel('x')
+    ax[0, 0].set_xlim([0.0, 1.05])
+    ax[0, 0].set_xticks([i * 0.1 for i in range(11)])
+    ax[0, 0].set_ylabel(r'$\eta$')
+    ax[0, 0].set_title(f"Entropy t={config['t_end']}s")
+    ax[0, 0].plot(config['xnode'], variables_tuple[4][:, config['nstep']])
+
+    # Entropy Flux
+    ax[0, 1].set_xlabel('x')
+    ax[0, 1].set_xlim([0.0, 1.05])
+    ax[0, 1].set_xticks([i * 0.1 for i in range(11)])
+    ax[0, 1].set_ylabel(r'Q')
+    ax[0, 1].set_title(f"Entropy Flux t={config['t_end']}s")
+    ax[0, 1].plot(config['xnode'], variables_tuple[5][:, config['nstep']])
+
+    # Entropy Residual
+    ax[1, 0].set_xlabel('x')
+    ax[1, 0].set_xlim([0.0, 1.05])
+    ax[1, 0].set_xticks([i * 0.1 for i in range(11)])
+    ax[1, 0].set_ylabel(r'$\nabla Q$')
+    ax[1, 0].set_title(f"Entropy Residual t={config['t_end']}s")
+    ax[1, 0].plot(config['xnode'], variables_tuple[6][:, config['nstep']])
+
+    # Entropy Residual
+    ax[1, 1].set_xlabel('x')
+    ax[1, 1].set_xlim([0.0, 1.05])
+    ax[1, 1].set_xticks([i * 0.1 for i in range(11)])
+    ax[1, 1].set_ylabel(r'$\nu_e$')
+    ax[1, 1].set_title(f"Viscosity t={config['t_end']}s")
+    ax[1, 1].plot(config['xnode'], variables_tuple[7][:, config['nstep']])
+
+    # Save the figure with both plots
+    plt.tight_layout()
+    plt.savefig(f"./{config['folder_path']}/{config['method_file_name']}_entropy_plots_t={config['t_end']}.png")
+    plt.close()
 
 def plot_solution(t_end, variables_tuple , config, analytic, rho_energy_analytic):
-    fig, axs = plt.subplots(2,2,figsize=(8,8), layout='constrained')
+    fig, ax = plt.subplots(2,2,figsize=(8,8), layout='constrained')
     # First row
-    axs[0, 0].set_title(f"Density - t = {t_end}s")
-    axs[0, 0].plot(config['xnode'], variables_tuple[0][:, config['nstep']], linestyle ="", marker="x")
-    axs[0, 0].plot(config['xnode'], analytic[0].T)
-    axs[0, 0].set_ylabel('rho', fontweight='bold')
-    axs[0, 0].set_xlabel('x', fontweight='bold')
-    axs[0, 0].set_xlim([0.0, 1.05])
-    axs[0, 0].set_xticks([i * 0.1 for i in range(11)])
-    axs[0, 0].set_ylim([-0.05,1.05])
+    ax[0, 0].set_title(f"Density - t = {t_end}s")
+    ax[0, 0].plot(config['xnode'], variables_tuple[0][:, config['nstep']], linestyle ="", marker="x")
+    ax[0, 0].plot(config['xnode'], analytic[0].T)
+    ax[0, 0].set_ylabel('rho', fontweight='bold')
+    ax[0, 0].set_xlabel('x', fontweight='bold')
+    ax[0, 0].set_xlim([0.0, 1.05])
+    ax[0, 0].set_xticks([i * 0.1 for i in range(11)])
+    ax[0, 0].set_ylim([-0.05,1.05])
 
 
-    axs[0, 1].set_title(f"Velocity - t = {t_end}s")
-    axs[0, 1].plot(config['xnode'], variables_tuple[1][:, config['nstep']], linestyle ="", marker="x")
-    axs[0, 1].plot(config['xnode'], analytic[1].T)
-    axs[0, 1].set_ylabel('v', fontweight='bold')
-    axs[0, 1].set_xlabel('x', fontweight='bold')
-    axs[0, 1].set_xlim([0.0, 1.05])
-    axs[0, 1].set_xticks([i * 0.1 for i in range(11)])
-    axs[0, 1].set_ylim([-0.05,1.05])
+    ax[0, 1].set_title(f"Velocity - t = {t_end}s")
+    ax[0, 1].plot(config['xnode'], variables_tuple[1][:, config['nstep']], linestyle ="", marker="x")
+    ax[0, 1].plot(config['xnode'], analytic[1].T)
+    ax[0, 1].set_ylabel('v', fontweight='bold')
+    ax[0, 1].set_xlabel('x', fontweight='bold')
+    ax[0, 1].set_xlim([0.0, 1.05])
+    ax[0, 1].set_xticks([i * 0.1 for i in range(11)])
+    ax[0, 1].set_ylim([-0.05,1.05])
 
     # Second row
-    axs[1, 0].set_title(f"Pressure - t = {t_end}s")
-    axs[1, 0].plot(config['xnode'], variables_tuple[2][:, config['nstep']], linestyle ="", marker="x")
-    axs[1, 0].plot(config['xnode'], analytic[2].T)
-    axs[1, 0].set_ylabel('p', fontweight='bold')
-    axs[1, 0].set_xlabel('x', fontweight='bold')
-    axs[1, 0].set_xlim([0.0, 1.05])
-    axs[1, 0].set_xticks([i * 0.1 for i in range(11)])
-    axs[1, 0].set_ylim([-0.05,1.05])
+    ax[1, 0].set_title(f"Pressure - t = {t_end}s")
+    ax[1, 0].plot(config['xnode'], variables_tuple[2][:, config['nstep']], linestyle ="", marker="x")
+    ax[1, 0].plot(config['xnode'], analytic[2].T)
+    ax[1, 0].set_ylabel('p', fontweight='bold')
+    ax[1, 0].set_xlabel('x', fontweight='bold')
+    ax[1, 0].set_xlim([0.0, 1.05])
+    ax[1, 0].set_xticks([i * 0.1 for i in range(11)])
+    ax[1, 0].set_ylim([-0.05,1.05])
 
-    axs[1, 1].set_title(f"rho_Energy - t = {t_end}s")
-    axs[1, 1].plot(config['xnode'], variables_tuple[3][:, config['nstep']], linestyle ="", marker="x")
-    axs[1, 1].plot(config['xnode'], rho_energy_analytic.T)
-    axs[1, 1].set_ylabel('rho_E', fontweight='bold')
-    axs[1, 1].set_xlabel('x', fontweight='bold')
-    axs[1, 1].set_xlim([0.0, 1.05])
-    axs[1, 1].set_xticks([i * 0.1 for i in range(11)])
-    axs[1, 1].set_ylim([-0.10, 3.05])
+    ax[1, 1].set_title(f"rho_Energy - t = {t_end}s")
+    ax[1, 1].plot(config['xnode'], variables_tuple[3][:, config['nstep']], linestyle ="", marker="x")
+    ax[1, 1].plot(config['xnode'], rho_energy_analytic.T)
+    ax[1, 1].set_ylabel('rho_E', fontweight='bold')
+    ax[1, 1].set_xlabel('x', fontweight='bold')
+    ax[1, 1].set_xlim([0.0, 1.05])
+    ax[1, 1].set_xticks([i * 0.1 for i in range(11)])
+    ax[1, 1].set_ylim([-0.10, 3.05])
 
     plt.savefig(f"./{config['folder_path']}/{config['method_file_name']}_t_end={t_end}.png")
     plt.close()
@@ -564,7 +600,5 @@ def plot_animation(xnode, U, nstep, ylabel, variable_title, stabilization_graph_
 
     ani = FuncAnimation(fig, update, frames=range(0, nstep + 1), blit=True)
     ani.save(f'{folder_path}/{file_name}_{ylabel}_t={t_end}.gif', writer='imagemagick')
-    plt.close(fig)
-
-
+    plt.close(fig) 
     

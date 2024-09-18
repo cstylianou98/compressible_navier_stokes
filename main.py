@@ -318,25 +318,29 @@ def run_simulation(config):
             U_temp = [config['U'][0][:, n], config['U'][1][:, n], config['U'][2][:, n]]
 
             # k1 step
-            M_tuple, F_tuple = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
+            M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
+            # entropy_res = solve(M_tuple[0], entropy_res_rhs)            
             k1 = tuple(config['dt'] * solve(M_tuple[var],  F_tuple[var]) for var in range(len(U_temp)))
 
             # k2 step
             U_temp = [config['U'][var][:, n] + 0.5 * k1[var] for var in range(len(U_temp))]
             U_temp = apply_boundary_conditions(U_temp, config['numnp'])
-            M_tuple, F_tuple = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
+            M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
+            # entropy_res = solve(M_tuple[0], entropy_res_rhs)            
             k2 = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
 
             # k3 step
             U_temp = [config['U'][var][:, n] + 0.5 * k2[var] for var in range(len(U_temp))]
             U_temp = apply_boundary_conditions(U_temp, config['numnp'])
-            M_tuple, F_tuple = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
+            M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
+            # entropy_res = solve(M_tuple[0], entropy_res_rhs)            
             k3 = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
 
             # k4 step
             U_temp = [config['U'][var][:, n] + k3[var] for var in range(len(U_temp))]
             U_temp = apply_boundary_conditions(U_temp, config['numnp'])
-            M_tuple, F_tuple = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
+            M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
+            # entropy_res = solve(M_tuple[0], entropy_res_rhs)            
             k4 = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
 
             # Update solution
@@ -353,14 +357,11 @@ def run_simulation(config):
             config['U'][2][0, n+1] = 2.5
             config['U'][2][config['numnp']-1, n+1] = 0.25 
 
-            U_entropy_res_temp = [config['U'][var][:, n] for var in range(len(U_temp))]
-            entropy_res, viscosity_e = assemble_entropy_res(U_entropy_res_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'])
-
         rho = config['U'][0]
         vel = config['U'][1] / config['U'][0]
         final_p = calc_p(config['gamma'], config['U'][2], config['U'][1], config['U'][0])
         energy = config['U'][2]
-        variables_tuple = (rho, vel, final_p, energy, entropy_res, viscosity_e)
+        variables_tuple = (rho, vel, final_p, energy, entropy, entropy_flux, entropy_res, viscosity_e)
 
     return variables_tuple
 
