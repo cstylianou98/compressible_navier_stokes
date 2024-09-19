@@ -319,28 +319,24 @@ def run_simulation(config):
 
             # k1 step
             M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
-            # entropy_res = solve(M_tuple[0], entropy_res_rhs)            
             k1 = tuple(config['dt'] * solve(M_tuple[var],  F_tuple[var]) for var in range(len(U_temp)))
 
             # k2 step
             U_temp = [config['U'][var][:, n] + 0.5 * k1[var] for var in range(len(U_temp))]
             U_temp = apply_boundary_conditions(U_temp, config['numnp'])
             M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
-            # entropy_res = solve(M_tuple[0], entropy_res_rhs)            
             k2 = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
 
             # k3 step
             U_temp = [config['U'][var][:, n] + 0.5 * k2[var] for var in range(len(U_temp))]
             U_temp = apply_boundary_conditions(U_temp, config['numnp'])
             M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
-            # entropy_res = solve(M_tuple[0], entropy_res_rhs)            
             k3 = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
 
             # k4 step
             U_temp = [config['U'][var][:, n] + k3[var] for var in range(len(U_temp))]
             U_temp = apply_boundary_conditions(U_temp, config['numnp'])
             M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
-            # entropy_res = solve(M_tuple[0], entropy_res_rhs)            
             k4 = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
 
             # Update solution

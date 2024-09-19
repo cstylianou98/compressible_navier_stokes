@@ -304,10 +304,10 @@ def assemble_TG_two_step(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt
     F_rho_E = np.zeros(numnp)
     F = (F_rho, F_m, F_rho_E)
 
-    entropy = np.zeros((numnp, numnp))
-    entropy_flux = np.zeros((numnp, numnp))
-    entropy_res = np.zeros((numnp, numnp))
-    viscosity_e = np.zeros((numnp, numnp))
+    entropy = np.zeros(numnp)
+    entropy_flux = np.zeros(numnp)
+    entropy_res = np.zeros(numnp)
+    viscosity_e = np.zeros(numnp)
 
     for i in range(numel):
         h = xnode[i + 1] - xnode[i]
@@ -380,6 +380,19 @@ def assemble_TG_two_step(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt
 
     viscosity_e = np.abs((h**2 * entropy_res)/np.abs((np.max(entropy)-np.min(entropy))))
 
+    ## Building F_viscosity matrix
+    F_visc_rho = np.zeros(numnp)
+    F_visc_m = np.zeros(numnp)
+    F_visc_rho_E = np.zeros(numnp)
+    F_visc = (F_visc_rho, F_visc_m, F_visc_rho_E)
+
+    for i in range(numel):
+            h = xnode[i + 1] - xnode[i]
+            weight = wpg * h / 2
+            isp = [i, i + 1]  # Global number of the nodes of the current element
+
+            # Get value of each variable at current element  
+            viscosity_el =  viscosity_e[isp]
 
     return M, F, entropy, entropy_flux, entropy_res, viscosity_e
 
@@ -509,7 +522,9 @@ def plot_entropy_res(variables_tuple, config):
     ax[0, 0].set_xticks([i * 0.1 for i in range(11)])
     ax[0, 0].set_ylabel(r'$\eta$')
     ax[0, 0].set_title(f"Entropy t={config['t_end']}s")
-    ax[0, 0].plot(config['xnode'], variables_tuple[4][:, config['nstep']])
+    # ax[0, 0].plot(config['xnode'], variables_tuple[4][:, config['nstep']])
+    ax[0, 0].plot(config['xnode'], variables_tuple[4])
+
 
     # Entropy Flux
     ax[0, 1].set_xlabel('x')
@@ -517,7 +532,8 @@ def plot_entropy_res(variables_tuple, config):
     ax[0, 1].set_xticks([i * 0.1 for i in range(11)])
     ax[0, 1].set_ylabel(r'Q')
     ax[0, 1].set_title(f"Entropy Flux t={config['t_end']}s")
-    ax[0, 1].plot(config['xnode'], variables_tuple[5][:, config['nstep']])
+    # ax[0, 1].plot(config['xnode'], variables_tuple[5][:, config['nstep']])
+    ax[0, 1].plot(config['xnode'], variables_tuple[5])
 
     # Entropy Residual
     ax[1, 0].set_xlabel('x')
@@ -525,7 +541,8 @@ def plot_entropy_res(variables_tuple, config):
     ax[1, 0].set_xticks([i * 0.1 for i in range(11)])
     ax[1, 0].set_ylabel(r'$\nabla Q$')
     ax[1, 0].set_title(f"Entropy Residual t={config['t_end']}s")
-    ax[1, 0].plot(config['xnode'], variables_tuple[6][:, config['nstep']])
+    # ax[1, 0].plot(config['xnode'], variables_tuple[6][:, config['nstep']])
+    ax[1, 0].plot(config['xnode'], variables_tuple[6])
 
     # Entropy Residual
     ax[1, 1].set_xlabel('x')
@@ -533,7 +550,9 @@ def plot_entropy_res(variables_tuple, config):
     ax[1, 1].set_xticks([i * 0.1 for i in range(11)])
     ax[1, 1].set_ylabel(r'$\nu_e$')
     ax[1, 1].set_title(f"Viscosity t={config['t_end']}s")
-    ax[1, 1].plot(config['xnode'], variables_tuple[7][:, config['nstep']])
+    # ax[1, 1].plot(config['xnode'], variables_tuple[7][:, config['nstep']])
+    ax[1, 1].plot(config['xnode'], variables_tuple[7])
+
 
     # Save the figure with both plots
     plt.tight_layout()
