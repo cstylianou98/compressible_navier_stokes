@@ -38,7 +38,7 @@ Q_{gp} = N \cdot \Q_{el}
 $$
 
 $$
-\nabla Q_{gp} = N_x \cdot \ Q_{el}
+\nabla Q_{gp} = N_x \cdot Q_{el}
 $$
 
 
