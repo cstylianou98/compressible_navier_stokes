@@ -72,9 +72,8 @@ $$
 
 Since the viscosity is built after the MASS and FLUX matrices are built, another loop is created where the $$F^{visc}_{gp}$$ is calculated as follows: 
 
-$$
-F^{visc}_{gp} = \left [\begin{array}{cc} \nu_{gp} \nabla \rho_{gp}\\ \mu_{gp} \nabla u_{gp} \\ \mu_{gp} \nabla u_{gp} \cdot u_{gp} - \kappa_{gp} \nabla T_{gp} \end{array}\right]
-$$
+$$ F^{visc}_{gp} = \left [\begin{array}{cc} \nu_{gp} \nabla \rho_{gp}\\ \mu_{gp} \nabla u_{gp} \\ \mu_{gp} \nabla u_{gp} \cdot u_{gp} - \kappa_{gp} \nabla T_{gp} \end{array}\right] $$
+
 
 Where specifically each term again is taken from the current U and viscosity and sent to the Gaussian points:
 
