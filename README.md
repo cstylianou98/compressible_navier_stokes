@@ -52,7 +52,7 @@ The entropy plots at t = 0.01 are as follows:
 
 <br>
 <div>
-    <img src="./RK4_TG2_two_step_EV/RK4_TG2_two_step_EV_entropy_plots_t=0.01.png" alt="Viscosity Graph at Timestep 1" style="display: block; margin: 0 auto; width: 60%;">
+    <img src="./RK4_TG2_two_step_EV/RK4_TG2_two_step_EV_entropy_plots_t=0.01.png" alt="Entropy plots at t=0.01s" style="display: block; margin: 0 auto; width: 60%;">
 </div>
 <br>
 
@@ -72,7 +72,12 @@ $$
 
 Since the viscosity is built after the MASS and FLUX matrices are built, another loop is created where the $$F^{visc}_{gp}$$ is calculated as follows: 
 
-$$ F^{visc}_{gp} = \left [\begin{array}{cc} \nu_{gp} \nabla \rho_{gp}\\ \mu_{gp} \nabla u_{gp} \\ \mu_{gp} \nabla u_{gp} \cdot u_{gp} - \kappa_{gp} \nabla T_{gp} \end{array}\right] $$
+<br>
+<div>
+    <img src="f_visc_eq_gp.png" alt="F_visc eq gp" style="display: block; margin: 0 auto; width: 60%;">
+</div>
+<br>
+
 
 
 Where specifically each term again is taken from the current U and viscosity and sent to the Gaussian points:
