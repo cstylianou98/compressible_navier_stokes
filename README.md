@@ -34,7 +34,7 @@ $$
 $$
 
 $$
-Q_{gp} = N \cdot \Q_{el}
+Q_{gp} = N \cdot Q_{el}
 $$
 
 $$
@@ -61,13 +61,72 @@ Showing indeed that we are capturing the jump as entropy changes, thus a viscosi
 Now adding the viscosity term calculated to our FEM formulation:
 
 $$
-\int (\frac{\partial U}{\partial t} + \frac{\partial F}{\partial x}) w + \nu_e \int \frac{\partial U}{\partial x} \frac{\partial w}{\partial x} 
+\int_{\Omega} w U_t dx - \int_{\Omega} w_x F(U) dx - \int_{\Omega} w_x F_{visc} (U) dx = 0
+$$
+
+Discretizing leads to:
+
+$$
+\sum \int N_A N_B U_t dx - \sum \int \frac{\partial N_B}{\partial x} F_{gp} dx - \sum \int \frac{\partial N_B}{\partial x} F^{visc}_{gp} dx = 0
+$$
+
+Since the viscosity is built after the MASS and FLUX matrices are built, another loop is created where the $$F^{visc}_{gp}$$ is calculated as follows: 
+
+$$
+F^{visc}_{gp} = \left [\begin{array}{cc}
+-\nu_{gp} \nabla \rho_{gp}\\
+-\mu_{gp} \nabla u_{gp}\\
+-\mu_{gp} \nabla u_{gp} \cdot u_{gp} - \kappa_{gp} \nabla T_{gp} \end{array}\right]
+$$
+
+Where specifically each term again is taken from the current U and viscosity and sent to the Gaussian points:
+
+
+
+$$
+\nu_{el} = \frac {\mu_{el}}{\rho_{el}}
 $$
 
 $$
-\int \frac{\partial U}{\partial t} w - \int F w_x + \int \nu_e \frac{\partial U}{\partial x} \frac{\partial w}{\partial x} = 0
+\mu_{gp} = N \cdot \mu_{el}
 $$
 
 $$
-\sum \int N_A N_B \frac{\partial U}{\partial t} - \sum \int F_{gp} \frac{\partial N_A}{\partial x} + \sum \int \nu_e \frac{\partial N_B}{\partial x} \frac{\partial N_A}{\partial x} = 0
+\nu_{gp} = N \cdot \nu_{el}
 $$
+
+$$
+\nabla \rho_{gp} = N_x \cdot \rho_{el}
+$$
+
+$$
+\nabla u_{gp} = N_x \cdot u_{el}
+$$
+
+$$
+u_{gp} = N \cdot u_{el}
+$$
+
+$$
+\kappa_{el} = \frac{\mu_{el}}{(\gamma - 1)}
+$$
+
+$$
+\kappa_{gp} = N \cdot \kappa_{el}
+$$
+
+$$
+T_{el} = \frac {p_{el}}{\rho_{el}}
+$$
+
+$$
+T_{gp} = N \cdot T_{el} 
+$$
+
+Thereafter, now that the $$F_{visc}$$ is built the system of equations is solved with the RHS taken as:
+
+$$
+RHS = F + F_{visc_i}
+$$
+
+and the LHS as the mass matrix
