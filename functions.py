@@ -387,14 +387,45 @@ def assemble_TG_two_step(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt
     F_visc = (F_visc_rho, F_visc_m, F_visc_rho_E)
 
     for i in range(numel):
-            h = xnode[i + 1] - xnode[i]
-            weight = wpg * h / 2
-            isp = [i, i + 1]  # Global number of the nodes of the current element
+        h = xnode[i + 1] - xnode[i]
+        weight = wpg * h / 2
+        isp = [i, i + 1]  # Global number of the nodes of the current element
 
-            # Get value of each variable at current element  
-            viscosity_el =  viscosity_e[isp]
+        # Get value of each variable at current element  
+        rho_el =  U_current[0][isp]
+        m_el =  U_current[1][isp]
+        rho_E_el = U_current[2][isp] 
 
-    return M, F, entropy, entropy_flux, entropy_res, viscosity_e
+        p_el = calc_p(gamma, rho_E_el, m_el, rho_el)
+        u_el = m_el/rho_el
+
+        viscosity_el =  viscosity_e[isp]
+        kinematic_visc_el = viscosity_el/rho_el
+
+        kappa_el = viscosity_el/(gamma - 1)
+        temp_el = p_el/rho_el
+
+        for ig in range(ngaus):
+            N = N_mef[ig, :]
+            Nx = Nxi_mef[ig, :] * 2 / h
+            w_ig = weight[ig]
+
+            kinematic_visc_gp = np.dot(N, kinematic_visc_el)
+            rho_gpx = np.dot(Nx, rho_el)
+
+            viscosity_gp = np.dot(N, viscosity_el)
+            u_gpx = np.dot(Nx, u_el)
+
+            u_gp = np.dot(Nx, u_el)
+            kappa_gp = np.dot(N, kappa_el)
+            temp_gpx = np.dot(Nx, temp_el)
+
+            F_visc_rho[isp] +=   w_ig * (Nx * kinematic_visc_gp * rho_gpx)
+            F_visc_m[isp] +=  w_ig * (Nx * viscosity_gp * u_gpx)
+            F_visc_rho_E[isp] += w_ig * (Nx * (viscosity_gp * u_gpx * u_gp + kappa_gp * temp_gpx))
+
+
+    return M, F, entropy, entropy_flux, entropy_res, viscosity_e, F_visc
 
 def assemble_entropy_res(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma):
     '''

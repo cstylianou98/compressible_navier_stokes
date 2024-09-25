@@ -27,40 +27,36 @@ $$
 u_{el} = m/\rho
 $$
 
-The entropy residual is then taken at the gaussian point using the derivative of the shape function as:
-
-$$
-\nabla Q_{gp} = N_x \cdot Q_{el}
-$$
-
-The plot show how at the first timestep (after timestep 0..) there is jump of the entropy residual corresponding to the initial shock of the shock tube problem.
-
-<br>
-<div>
-    <img src="./RK4_TG2_two_step_EV/entropy_res_plot.png" alt="Entropy Residual Graph at Timestep 1" style="display: block; margin: 0 auto; width: 60%;">
-</div>
-<br>
-
-
-The entropy itself is also calculated at the gaussian point using the shape function:
+Thereafter sending these to the gaussian points we get:
 
 $$
 \eta_{gp} = N \cdot \eta_{el}
 $$
 
-With this information we can calculate a viscosity given by:
+$$
+Q_{gp} = N \cdot \Q_{el}
+$$
+
+$$
+\nabla Q_{gp} = N_x \cdot \ Q_{el}
+$$
+
+
+With this, we can calculate a viscosity given by:
 
 $$
 \nu_e = \frac{h^2 * \nabla Q}{|\max(\eta)-\min(\eta)|}    
 $$
 
-The plot of the viscosity calculated is:
+The entropy plots at t = 0.01 are as follows:
 
 <br>
 <div>
-    <img src="./RK4_TG2_two_step_EV/viscosity_e_plot.png" alt="Viscosity Graph at Timestep 1" style="display: block; margin: 0 auto; width: 60%;">
+    <img src="./RK4_TG2_two_step_EV/RK4_TG2_two_step_EV_entropy_plots_t=0.01.png" alt="Viscosity Graph at Timestep 1" style="display: block; margin: 0 auto; width: 60%;">
 </div>
 <br>
+
+Showing indeed that we are capturing the jump as entropy changes, thus a viscosity is being added to dampen it.
 
 Now adding the viscosity term calculated to our FEM formulation:
 
