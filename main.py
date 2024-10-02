@@ -35,9 +35,9 @@ def setup_simulation(t_end, stabilization_choice):
     variables_titles = ['- Density', '- Velocity', '- Pressure', '- Energy']
     y_axis_labels = ['rho', 'v', 'p', 'E']
     stabilization_graph_titles = ['1D Shock Tube (RK4-Standard Galerkin) ', '1D Shock Tube (TG2-One step)', '1D Shock Tube (TG2-Two step)', '1D Shock Tube (RK4-TG2 Two step)', 'RK4-TG2 Two-step and EV']
-    folder_paths = ['./sod_tube_RK4_standard_galerkin', './sod_tube_TG2_one_step', './sod_tube_TG2_two_step', './sod_tube_RK4_TG2_two_step', './RK4_TG2_two_step_EV']
-    file_names = ['sod_tube_RK4_standard_galerkin', 'sod_tube_TG2_one_step', './sod_tube_TG2_two_step', './sod_tube_RK4_TG2_two_step', './RK4_TG2_two_step_EV']
-    methods_file_name = ['RK4_standard_galerkin', 'TG2_one_step', 'TG2_two_step', 'RK4_TG2_two_step', 'RK4_TG2_two_step_EV']
+    folder_paths = ['./RK4_standard_galerkin', './TG2_one_step', './TG2_two_step', './RK4_TG2_two_step', './RK4_TG2_two_step_EV']
+    file_names = ['RK4_standard_galerkin', 'TG2_one_step', './TG2_two_step', './RK4_TG2_two_step', './RK4_TG2_two_step_EV']
+    methods_file_name = ['RK4_galerkin', 'TG2_one_step', 'TG2_two_step', 'RK4_TG2_two_step', 'RK4_TG2_two_step_EV']
 
     if stabilization_choice == 1:
          stabilization_graph_title = stabilization_graph_titles[0]
@@ -262,7 +262,7 @@ def run_simulation(config):
         energy = config['U'][2]
         variables_tuple = (rho, vel, final_p, energy)
 
-    if config['stabilization_choice'] == 4:
+    elif config['stabilization_choice'] == 4:
         for n in range(config['nstep']):
             print('Timestep is:', n)
             U_temp = [config['U'][0][:, n], config['U'][1][:, n], config['U'][2][:, n]]
@@ -309,39 +309,44 @@ def run_simulation(config):
         energy = config['U'][2]
         variables_tuple = (rho, vel, final_p, energy)
 
-    if config['stabilization_choice'] == 5:
+    elif config['stabilization_choice'] == 5:
         
         viscosity_e = np.zeros((config['numnp'], config['numnp']))
-        
+
+        # Butcher tableau for RK4 (f_rk == 4)
+        a = [[0,   0,   0,   0],
+            [0.5, 0,   0,   0],
+            [0,   0.5, 0,   0],
+            [0,   0,   1,   0]]
+
+        c = [0, 0.5, 0.5, 1]
+        w = [1/6, 1/3, 1/3, 1/6]
+        n_stages = 4
+
         for n in range(config['nstep']):
+
             print('timestep is', n)
+            
+            # Initialize U_temp and k for the RK stages
             U_temp = [config['U'][0][:, n], config['U'][1][:, n], config['U'][2][:, n]]
+            k = [None] * n_stages
+            
+            # Loop over RK stages
+            for s in range(n_stages):
+                # Update U_temp based on previous k values and Butcher tableau coefficients 'a'
+                if s == 0:
+                    U_temp_stage = U_temp  # k1 doesnt involve any manipulation to U_temp
+                else:
+                    U_temp_stage = [config['U'][var][:, n] + sum(a[s][j] * k[j][var] for j in range(s)) for var in range(len(U_temp))]
 
-            # k1 step
-            M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e, F_visc = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
-            k1 = tuple(config['dt'] * solve(M_tuple[var],  (F_tuple[var] + F_visc[var])) for var in range(len(U_temp)))
+                U_temp_stage = apply_boundary_conditions(U_temp_stage, config['numnp'])
 
-            # k2 step
-            U_temp = [config['U'][var][:, n] + 0.5 * k1[var] for var in range(len(U_temp))]
-            U_temp = apply_boundary_conditions(U_temp, config['numnp'])
-            M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e, F_visc = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
-            k2 = tuple(config['dt'] * solve(M_tuple[var], (F_tuple[var] + F_visc[var])) for var in range(len(U_temp)))
+                M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e, F_visc = assemble_TG_two_step_EV(U_temp_stage, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
 
-            # k3 step
-            U_temp = [config['U'][var][:, n] + 0.5 * k2[var] for var in range(len(U_temp))]
-            U_temp = apply_boundary_conditions(U_temp, config['numnp'])
-            M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e, F_visc = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
-            k3 = tuple(config['dt'] * solve(M_tuple[var], (F_tuple[var] + F_visc[var])) for var in range(len(U_temp)))
+                k[s] = tuple(config['dt'] * solve(M_tuple[var], (F_tuple[var] + F_visc[var])) for var in range(len(U_temp)))
 
-            # k4 step
-            U_temp = [config['U'][var][:, n] + k3[var] for var in range(len(U_temp))]
-            U_temp = apply_boundary_conditions(U_temp, config['numnp'])
-            M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e, F_visc = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
-            k4 = tuple(config['dt'] * solve(M_tuple[var], (F_tuple[var] + F_visc[var])) for var in range(len(U_temp)))
-
-            # Update solution
             for var in range(len(config['U'])):
-                config['U'][var][:, n + 1] = config['U'][var][:, n] + (1.0 / 6.0) * (k1[var] + 2 * k2[var] + 2 * k3[var] + k4[var])
+                config['U'][var][:, n + 1] = config['U'][var][:, n] + sum(w[s] * k[s][var] for s in range(n_stages))
 
             # Apply boundary conditions again
             config['U'][0][0, n+1] = 1.0
@@ -359,7 +364,7 @@ def run_simulation(config):
         energy = config['U'][2]
         variables_tuple = (rho, vel, final_p, energy, entropy, entropy_flux, entropy_res, viscosity_e)
 
-    return variables_tuple
+    return variables_tuple      
 
     
 # Main Execution
@@ -369,7 +374,9 @@ def main():
     variables_tuple = run_simulation(config)
     analytic, rho_energy_analytic = SodShockAnalytic(config, t_end)  
     plot_solution(t_end, variables_tuple, config, analytic, rho_energy_analytic)
-    plot_entropy_res(variables_tuple, config)
+
+    if config['stabilization_choice'] == 5:
+        plot_entropy_res(variables_tuple, config)
 
     # for var in range (len(variables_tuple)):
 
