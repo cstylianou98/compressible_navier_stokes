@@ -680,21 +680,3 @@ def plot_solution(t_end, variables_tuple , config, analytic, rho_energy_analytic
     plt.savefig(f"./{config['folder_path']}/{config['method_file_name']}_t_end={t_end}.png")
     plt.close()
 
-def plot_animation(xnode, U, nstep, ylabel, variable_title, stabilization_graph_title, folder_path, file_name, t_end, dt):
-    fig, ax = plt.subplots()
-    line, = ax.plot(xnode, U[:, 0], label=f't = 0.0', linestyle ="", marker="x")
-    ax.set_xlabel('x')
-    ax.set_ylabel(ylabel)
-    ax.set_title(stabilization_graph_title + variable_title)
-    ax.set_xlim(0, 1)
-    ax.legend()
-
-    def update(frame):
-        line.set_ydata(U[:, frame])
-        ax.legend([f't = {frame * dt:.2f}'])
-        return line,
-
-    ani = FuncAnimation(fig, update, frames=range(0, nstep + 1), blit=True)
-    ani.save(f'{folder_path}/{file_name}_{ylabel}_t={t_end}.gif', writer='imagemagick')
-    plt.close(fig) 
-    

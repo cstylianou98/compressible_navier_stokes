@@ -144,36 +144,43 @@ def setup_simulation(t_end, stabilization_choice):
 
 # Main time-stepping loop
 def run_simulation(config):
+
+    # Butcher tableau for RK4 (f_rk == 4)
+    a = [[0,   0,   0,   0],
+        [0.5, 0,   0,   0],
+        [0,   0.5, 0,   0],
+        [0,   0,   1,   0]]
+
+    c = [0, 0.5, 0.5, 1]
+    w = [1/6, 1/3, 1/3, 1/6]
+    n_stages = 4
+
+
     if config['stabilization_choice'] == 1:
-        M_tuple = assemble_mass_matrix(config['numel'], config['xnode'], config['wpg'], config['N_mef'])
+
         for n in range(config['nstep']):
+
+            print('timestep is', n)
+
+            # Initialize U_temp and k for the RK stages
             U_temp = [config['U'][0][:, n], config['U'][1][:, n], config['U'][2][:, n]]
+            k = [None] * n_stages
+            M_tuple = assemble_mass_matrix(config['numel'], config['xnode'], config['wpg'], config['N_mef'])
 
-            # k1 step
-            F_tuple = assemble_flux_vector(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'])
-            k1 = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
+            for s in range(n_stages):
+                # update U_temp based on previous k values and Butcher tableau coefficients 'a'
+                if s == 0:
+                    U_temp_stage = U_temp  # k1 doesnt involve any manipulation to U_temp
 
-            # k2 step
-            U_temp = [config['U'][var][:, n] + 0.5 * k1[var] for var in range(len(U_temp))]
-            U_temp = apply_boundary_conditions(U_temp, config['numnp'])
-            F_tuple = assemble_flux_vector(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'])
-            k2 = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
+                else:
+                    U_temp_stage = [config['U'][var][:, n] + sum(a[s][j] * k[j][var] for j in range(s)) for var in range(len(U_temp))]
 
-            # k3 step
-            U_temp = [config['U'][var][:, n] + 0.5 * k2[var] for var in range(len(U_temp))]
-            U_temp = apply_boundary_conditions(U_temp, config['numnp'])
-            F_tuple = assemble_flux_vector(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'])
-            k3 = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
+                U_temp_stage = apply_boundary_conditions(U_temp_stage, config['numnp'])
+                F_tuple = assemble_flux_vector(U_temp_stage, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'])
+                k[s] = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
 
-            # k4 step
-            U_temp = [config['U'][var][:, n] + k3[var] for var in range(len(U_temp))]
-            U_temp = apply_boundary_conditions(U_temp, config['numnp'])
-            F_tuple = assemble_flux_vector(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'])
-            k4 = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
-
-            # Update solution
             for var in range(len(config['U'])):
-                config['U'][var][:, n + 1] = config['U'][var][:, n] + (1.0 / 6.0) * (k1[var] + 2 * k2[var] + 2 * k3[var] + k4[var])
+                config['U'][var][:, n + 1] = config['U'][var][:, n] + sum(w[s] * k[s][var] for s in range(n_stages))
 
             # Apply boundary conditions again
             config['U'][0][0, n+1] = 1.0
@@ -183,7 +190,7 @@ def run_simulation(config):
             config['U'][1][config['numnp']-1, n+1] = 0.0
 
             config['U'][2][0, n+1] = 2.5
-            config['U'][2][config['numnp']-1, n+1] = 0.25     
+            config['U'][2][config['numnp']-1, n+1] = 0.25 
 
         rho = config['U'][0]
         vel = config['U'][1] / config['U'][0]
@@ -191,8 +198,10 @@ def run_simulation(config):
         energy = config['U'][2]
         variables_tuple = (rho, vel, final_p, energy)
 
+
     elif config['stabilization_choice'] == 2:
         for n in range (config['nstep']):
+            print ('timestep is', n)
             U_n = (config['U'][0][:, n], 
                       config['U'][1][:, n], 
                       config['U'][2][:, n])
@@ -264,34 +273,25 @@ def run_simulation(config):
 
     elif config['stabilization_choice'] == 4:
         for n in range(config['nstep']):
-            print('Timestep is:', n)
+            print('timestep is:', n)
+            # Initialize U_temp and k for the RK stages
             U_temp = [config['U'][0][:, n], config['U'][1][:, n], config['U'][2][:, n]]
+            k = [None] * n_stages
 
-            # k1 step
-            M_tuple, F_tuple = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'])
-            k1 = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
+            # Loop over RK stages
+            for s in range(n_stages):
+                # Update U_temp based on previous k values and Butcher tableau coefficients 'a'
+                if s == 0:
+                    U_temp_stage = U_temp  # k1 doesnt involve any manipulation to U_temp
+                else:
+                    U_temp_stage = [config['U'][var][:, n] + sum(a[s][j] * k[j][var] for j in range(s)) for var in range(len(U_temp))]
 
-            # k2 step
-            U_temp = [config['U'][var][:, n] + 0.5 * k1[var] for var in range(len(U_temp))]
-            U_temp = apply_boundary_conditions(U_temp, config['numnp'])
-            M_tuple, F_tuple = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'])
-            k2 = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
-
-            # k3 step
-            U_temp = [config['U'][var][:, n] + 0.5 * k2[var] for var in range(len(U_temp))]
-            U_temp = apply_boundary_conditions(U_temp, config['numnp'])
-            M_tuple, F_tuple = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'])
-            k3 = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
-
-            # k4 step
-            U_temp = [config['U'][var][:, n] + k3[var] for var in range(len(U_temp))]
-            U_temp = apply_boundary_conditions(U_temp, config['numnp'])
-            M_tuple, F_tuple = assemble_TG_two_step(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'])
-            k4 = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
-
-            # Update solution
+                U_temp_stage = apply_boundary_conditions(U_temp_stage, config['numnp'])
+                M_tuple, F_tuple = assemble_TG_two_step(U_temp_stage, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'])
+                k[s] = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
+            
             for var in range(len(config['U'])):
-                config['U'][var][:, n + 1] = config['U'][var][:, n] + (1.0 / 6.0) * (k1[var] + 2 * k2[var] + 2 * k3[var] + k4[var])
+                config['U'][var][:, n + 1] = config['U'][var][:, n] + sum(w[s] * k[s][var] for s in range(n_stages))
 
             # Apply boundary conditions again
             config['U'][0][0, n+1] = 1.0
@@ -301,7 +301,7 @@ def run_simulation(config):
             config['U'][1][config['numnp']-1, n+1] = 0.0
 
             config['U'][2][0, n+1] = 2.5
-            config['U'][2][config['numnp']-1, n+1] = 0.25     
+            config['U'][2][config['numnp']-1, n+1] = 0.25  
 
         rho = config['U'][0]
         vel = config['U'][1] / config['U'][0]
@@ -312,16 +312,6 @@ def run_simulation(config):
     elif config['stabilization_choice'] == 5:
         
         viscosity_e = np.zeros((config['numnp'], config['numnp']))
-
-        # Butcher tableau for RK4 (f_rk == 4)
-        a = [[0,   0,   0,   0],
-            [0.5, 0,   0,   0],
-            [0,   0.5, 0,   0],
-            [0,   0,   1,   0]]
-
-        c = [0, 0.5, 0.5, 1]
-        w = [1/6, 1/3, 1/3, 1/6]
-        n_stages = 4
 
         for n in range(config['nstep']):
 
@@ -377,22 +367,6 @@ def main():
 
     if config['stabilization_choice'] == 5:
         plot_entropy_res(variables_tuple, config)
-
-    # for var in range (len(variables_tuple)):
-
-        # plot_animation(
-        #     config['xnode'], 
-        #     variables_tuple[var], 
-        #     config['nstep'],
-        #     config['y_axis_labels'][var], 
-        #     config['variables_titles'][var], 
-        #     config['stabilization_graph_title'], 
-        #     config['folder_path'], 
-        #     config['file_name'], 
-        #     config['t_end'],
-        #     config['dt']
-
-        # )
 
 if __name__ == "__main__":
     main()
