@@ -368,7 +368,6 @@ def assemble_TG_two_step(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt
 
     return M, F
 
-
 def assemble_TG_two_step_EV(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt, viscosity_e):
     '''
     (input) U_current tuple: current solution tuple
@@ -506,25 +505,29 @@ def assemble_TG_two_step_EV(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma,
 
             kinematic_visc_gp = np.dot(N, kinematic_visc_el)
             rho_gpx = np.dot(Nx, rho_el)
-            m_gpx = np.dot(Nx, m_el)
-            rho_E_gpx = np.dot(Nx, rho_E_el)
+            # m_gpx = np.dot(Nx, m_el)
+            # rho_E_gpx = np.dot(Nx, rho_E_el)
 
             viscosity_gp = np.dot(N, viscosity_el)
             kinematic_visc_gp = np.dot(N, kinematic_visc_el)
             u_gpx = np.dot(Nx, u_el)
 
-            u_gp = np.dot(Nx, u_el)
+            # u_gp = np.dot(Nx, u_el)
             kappa_gp = np.dot(N, kappa_el)
             temp_gpx = np.dot(Nx, temp_el)
 
-            # F_visc_rho[isp] +=   - w_ig * (Nx * kinematic_visc_gp * rho_gpx)
-            # F_visc_m[isp] +=  - w_ig * (Nx * viscosity_gp * u_gpx)
+            nabla_u_dot_u_gp = np.dot(u_gpx, u_el)
+
+
+            F_visc_rho[isp] +=   - w_ig * (Nx * kinematic_visc_gp * rho_gpx)
+            F_visc_m[isp] +=  - w_ig * (Nx * viscosity_gp * u_gpx)
+            F_visc_rho_E[isp] += - w_ig * Nx * ((viscosity_gp * nabla_u_dot_u_gp + kappa_gp * temp_gpx))
+
             # F_visc_rho_E[isp] += - w_ig * Nx * ((viscosity_gp * u_gpx * u_gp + kappa_gp * temp_gpx))
 
-            F_visc_rho[isp] +=   - w_ig * (Nx * viscosity_gp * rho_gpx)
-            F_visc_m[isp] +=   - w_ig * (Nx * viscosity_gp * m_gpx)
-            F_visc_rho_E[isp] +=   - w_ig * (Nx * viscosity_gp * rho_E_gpx)
-
+            # F_visc_rho[isp] +=   - w_ig * (Nx * viscosity_gp * rho_gpx)
+            # F_visc_m[isp] +=   - w_ig * (Nx * viscosity_gp * m_gpx)
+            # F_visc_rho_E[isp] +=   - w_ig * (Nx * viscosity_gp * rho_E_gpx)
 
     return M, F, entropy, entropy_flux, entropy_res, viscosity_e, F_visc
 
