@@ -467,8 +467,8 @@ def assemble_TG_two_step_EV(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma,
     M_m[-1, -1] = 1
     M_rho_E[-1, -1] = 1  
 
-
-    viscosity_e = np.abs((h**2 * entropy_res)/np.abs((np.max(entropy)-np.min(entropy))))
+    c_e = 1
+    viscosity_e = c_e * np.abs((h**2 * entropy_res)/np.abs((np.max(entropy)-np.min(entropy))))
 
     ## Building F_viscosity matrix
     F_visc_rho = np.zeros(numnp)
@@ -512,18 +512,13 @@ def assemble_TG_two_step_EV(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma,
             kinematic_visc_gp = np.dot(N, kinematic_visc_el)
             u_gpx = np.dot(Nx, u_el)
 
-            # u_gp = np.dot(Nx, u_el)
+            u_gp = np.dot(N, u_el)
             kappa_gp = np.dot(N, kappa_el)
             temp_gpx = np.dot(Nx, temp_el)
 
-            nabla_u_dot_u_gp = np.dot(u_gpx, u_el)
-
-
             F_visc_rho[isp] +=   - w_ig * (Nx * kinematic_visc_gp * rho_gpx)
             F_visc_m[isp] +=  - w_ig * (Nx * viscosity_gp * u_gpx)
-            F_visc_rho_E[isp] += - w_ig * Nx * ((viscosity_gp * nabla_u_dot_u_gp + kappa_gp * temp_gpx))
-
-            # F_visc_rho_E[isp] += - w_ig * Nx * ((viscosity_gp * u_gpx * u_gp + kappa_gp * temp_gpx))
+            F_visc_rho_E[isp] += - w_ig * Nx * ((viscosity_gp * u_gpx * u_gp + kappa_gp * temp_gpx))
 
             # F_visc_rho[isp] +=   - w_ig * (Nx * viscosity_gp * rho_gpx)
             # F_visc_m[isp] +=   - w_ig * (Nx * viscosity_gp * m_gpx)
