@@ -113,6 +113,8 @@ def setup_simulation(t_end, stabilization_choice):
     U_init_analytical_right = np.array([0.125, 0.0, 0.1])
     x0_analytical = numel // 2
 
+    # Entropy viscosity tunable constant
+    c_e = 1
 
 
     return {
@@ -137,7 +139,8 @@ def setup_simulation(t_end, stabilization_choice):
          'U': U,
          'U_init_analytical_left': U_init_analytical_left,
          'U_init_analytical_right': U_init_analytical_right,
-         'x0_analytical': x0_analytical
+         'x0_analytical': x0_analytical,
+         'c_e': c_e
 
     }
 
@@ -331,7 +334,7 @@ def run_simulation(config):
 
                 U_temp_stage = apply_boundary_conditions(U_temp_stage, config['numnp'])
 
-                M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e, F_visc = assemble_TG_two_step_EV(U_temp_stage, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], viscosity_e)
+                M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e, F_visc = assemble_TG_two_step_EV(U_temp_stage, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], config['c_e'])
 
                 k[s] = tuple(config['dt'] * solve(M_tuple[var], (F_tuple[var] + F_visc[var])) for var in range(len(U_temp)))
 

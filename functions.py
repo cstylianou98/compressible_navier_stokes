@@ -368,7 +368,7 @@ def assemble_TG_two_step(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt
 
     return M, F
 
-def assemble_TG_two_step_EV(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt, viscosity_e):
+def assemble_TG_two_step_EV(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt, c_e):
     '''
     (input) U_current tuple: current solution tuple
     (input) numel int: number of elements
@@ -467,7 +467,6 @@ def assemble_TG_two_step_EV(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma,
     M_m[-1, -1] = 1
     M_rho_E[-1, -1] = 1  
 
-    c_e = 1
     viscosity_e = c_e * np.abs((h**2 * entropy_res)/np.abs((np.max(entropy)-np.min(entropy))))
 
     ## Building F_viscosity matrix
@@ -636,8 +635,14 @@ def plot_entropy_res(variables_tuple, config):
 
 def plot_solution(t_end, variables_tuple , config, analytic, rho_energy_analytic):
     fig, ax = plt.subplots(2,2,figsize=(8,8), layout='constrained')
+    if config['stabilization_choice'] == 5:
+        graph_title_c_e = f"c_e = {config['c_e']}"
+        file_c_e = f"_c_e={config['c_e']}"
+    else:
+        graph_title_c_e = ''
+        file_c_e = ''
     # First row
-    ax[0, 0].set_title(f"Density - t = {t_end}s")
+    ax[0, 0].set_title(f"Density - t = {t_end}s {graph_title_c_e}")
     ax[0, 0].plot(config['xnode'], variables_tuple[0][:, config['nstep']], linestyle ="", marker="x")
     ax[0, 0].plot(config['xnode'], analytic[0].T)
     ax[0, 0].set_ylabel('rho', fontweight='bold')
@@ -647,7 +652,7 @@ def plot_solution(t_end, variables_tuple , config, analytic, rho_energy_analytic
     ax[0, 0].set_ylim([-0.05,1.05])
 
 
-    ax[0, 1].set_title(f"Velocity - t = {t_end}s")
+    ax[0, 1].set_title(f"Velocity - t = {t_end}s {graph_title_c_e}")
     ax[0, 1].plot(config['xnode'], variables_tuple[1][:, config['nstep']], linestyle ="", marker="x")
     ax[0, 1].plot(config['xnode'], analytic[1].T)
     ax[0, 1].set_ylabel('v', fontweight='bold')
@@ -657,7 +662,7 @@ def plot_solution(t_end, variables_tuple , config, analytic, rho_energy_analytic
     ax[0, 1].set_ylim([-0.05,1.05])
 
     # Second row
-    ax[1, 0].set_title(f"Pressure - t = {t_end}s")
+    ax[1, 0].set_title(f"Pressure - t = {t_end}s {graph_title_c_e}")
     ax[1, 0].plot(config['xnode'], variables_tuple[2][:, config['nstep']], linestyle ="", marker="x")
     ax[1, 0].plot(config['xnode'], analytic[2].T)
     ax[1, 0].set_ylabel('p', fontweight='bold')
@@ -666,7 +671,7 @@ def plot_solution(t_end, variables_tuple , config, analytic, rho_energy_analytic
     ax[1, 0].set_xticks([i * 0.1 for i in range(11)])
     ax[1, 0].set_ylim([-0.05,1.05])
 
-    ax[1, 1].set_title(f"rho_Energy - t = {t_end}s")
+    ax[1, 1].set_title(f"rho_Energy - t = {t_end}s {graph_title_c_e}")
     ax[1, 1].plot(config['xnode'], variables_tuple[3][:, config['nstep']], linestyle ="", marker="x")
     ax[1, 1].plot(config['xnode'], rho_energy_analytic.T)
     ax[1, 1].set_ylabel('rho_E', fontweight='bold')
@@ -675,6 +680,6 @@ def plot_solution(t_end, variables_tuple , config, analytic, rho_energy_analytic
     ax[1, 1].set_xticks([i * 0.1 for i in range(11)])
     ax[1, 1].set_ylim([-0.10, 3.05])
 
-    plt.savefig(f"./{config['folder_path']}/{config['method_file_name']}_t_end={t_end}.png")
+    plt.savefig(f"./{config['folder_path']}/{config['method_file_name']}_t_end={t_end}{file_c_e}.png")
     plt.close()
 

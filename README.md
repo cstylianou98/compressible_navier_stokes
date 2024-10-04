@@ -52,7 +52,7 @@ The entropy plots at t = 0.01 are as follows:
 
 <br>
 <div>
-    <img src="./RK4_TG2_two_step_EV/RK4_TG2_two_step_EV_entropy_plots_t=0.01.png" alt="Entropy plots at t=0.01s" style="display: block; margin: 0 auto; width: 60%;">
+    <img src="./RK4_TG2_two_step_EV/RK4_TG2_two_step_EV_entropy_plots_t=0.2.png" alt="Entropy plots at t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
 </div>
 <br>
 
@@ -131,3 +131,54 @@ RHS = F + F_{visc_i}
 $$
 
 and the LHS as the mass matrix
+
+## Evolution of numerical method used to solve the shock tube problem:
+
+I first started off applying the standard galerkin for space and the RK4 time discretization scheme on the shock tube problem. All results shown are at a time = 0.2s. As you can see significant instabilities can be seen:
+
+<br>
+<div>
+    <img src="./RK4_standard_galerkin/RK4_galerkin_t_end=0.2.png" alt="RK4 standard galerkin plots at t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
+</div>
+<br>
+
+Thereafter a one-step Taylor Galerkin of order 2 was employed, which indeed didn't work great:
+
+<br>
+<div>
+    <img src="./TG2_one_step/TG2_one_step_t_end=0.2.png" alt="TG2 one-step plots at t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
+</div>
+<br>
+
+Following this a two-step Taylor Galerkin of order 2 was employed, significantly improving the stability, however not following the shocks at some points.
+
+<br>
+<div>
+    <img src="./TG2_two_step/TG2_two_step_t_end=0.2.png" alt="TG2 two-step t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
+</div>
+<br>
+
+The next idea was to combine two-step Taylor Galerkin order 2 with a RK4 time stepping which improved shock capture yet still had some instabilities, as you can see at some points:
+
+
+<br>
+<div>
+    <img src="./RK4_TG2_two_step/RK4_TG2_two_step_t_end=0.2.png" alt="RK4 TG2 two-step t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
+</div>
+<br>
+
+Following the next idea was to combine the RK4 TG2 two-step with Entropy viscosity! A greatly improved shock capture, however at points I believe it to be over-diffusive when the tunable constant c_e = 1:
+
+<br>
+<div>
+    <img src="./RK4_TG2_two_step_EV/RK4_TG2_two_step_EV_t_end=0.2_c_e=1.png" alt="RK4 TG2 two-step t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
+</div>
+<br>
+
+Reducing this tunable constant c_e from =1 to =0.05 we get the following compromise:
+
+<br>
+<div>
+    <img src="./RK4_TG2_two_step_EV/RK4_TG2_two_step_EV_t_end=0.2_c_e=0.05.png" alt="RK4 TG2 two-step t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
+</div>
+<br>
