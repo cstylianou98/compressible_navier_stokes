@@ -48,7 +48,7 @@ $$
 \nu_e = \frac{h^2 * \nabla Q}{|\max(\eta)-\min(\eta)|}    
 $$
 
-The entropy plots at t = 0.01 are as follows:
+The entropy plots at t = 0.2s are as follows:
 
 <br>
 <div>
