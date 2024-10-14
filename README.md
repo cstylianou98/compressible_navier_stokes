@@ -130,7 +130,34 @@ $$
 RHS = F + F_{visc_i}
 $$
 
-and the LHS as the mass matrix
+and the LHS as the mass matrix. 
+
+
+## LPS - Local Projection Stabilization
+
+This is a different stabilization method that has some over-undershoots and therefore can be combined quite nicely with the Entropy Viscosity method.
+
+Formulating the LPS stabilized term:
+
+$$
+s_h^{LPS,e} = v_h^{LPS,e} \int_{K^e} \nabla w_h \cdot(\nabla U_h - g_h) dx
+$$
+
+Where:
+
+$$
+v^{LPS,e} = \frac{\omega h^e ||f'(u_h)||_{L^\infty(K^e)}}{2p}
+$$
+
+With $\omega = 1$ (default) $p = 1$ (degree of FEM polynomial).
+
+Adding this to the FEM formulation leads to:
+
+$$
+\int_{\Omega} w U_t dx - \int_{\Omega} w_x F(U) dx - \int_{\Omega} w_x F_{visc} (U) dx + v_{LPS,e} \int_{\Omega} w_x \cdot(U_x - g) dx = 0
+$$
+
+
 
 ## Evolution of numerical method used to solve the shock tube problem:
 

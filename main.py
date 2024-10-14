@@ -10,15 +10,16 @@ def configure_simulation():
      t_end = float(input("\n>>> Input the last timestep (s) -----> "))
      stabilization_choice = int(input(
           "\n>>> Please choose your numerical scheme. \n"
-          " 1. RK4 with Standard Galerkin \n"
-          " 2. Taylor Galerkin (TG2) One-Step \n"
-          " 3. Taylor Galerkin (TG2) Two-Step \n"
-          " 4. RK4 with Taylor Galerkin Two-Step \n"
-          " 5. RK4 with Taylor Galerkin Two-Step and Entropy Viscosity \n"
+          "1. RK4 with Standard Galerkin \n"
+          "2. Taylor Galerkin (TG2) One-Step \n"
+          "3. Taylor Galerkin (TG2) Two-Step \n"
+          "4. RK4 with Taylor Galerkin Two-Step \n"
+          "5. RK4 with Taylor Galerkin Two-Step and Entropy Viscosity \n"
+          "6. RK4 with Taylor Galerkin Two-Step, EV and LPS \n"
           "\nType your choice here -----> "
      ))
 
-     while stabilization_choice not in [1, 2, 3, 4, 5]:
+     while stabilization_choice not in [1, 2, 3, 4, 5, 6]:
           print ("\n>>> Invalid choice. Please type an appropriate integer (1, 2, 3, 4) for the relevant numerical scheme choice.")
           stabilization_choice = int(input(
           "1. RK4 with Standard Galerkin \n"
@@ -26,6 +27,7 @@ def configure_simulation():
           "3. Taylor Galerkin (TG2) Two-Step \n"
           "4. RK4 with Taylor Galerkin (TG2) Two-Step \n"
           "5. RK4 with Taylor Galerkin Two-Step and Entropy Viscosity \n"
+          "6. RK4 with Taylor Galerkin Two-Step, EV and LPS \n"
           "\nType your choice here -----> "
           ))
      return t_end, stabilization_choice
@@ -34,10 +36,10 @@ def configure_simulation():
 def setup_simulation(t_end, stabilization_choice):
     variables_titles = ['- Density', '- Velocity', '- Pressure', '- Energy']
     y_axis_labels = ['rho', 'v', 'p', 'E']
-    stabilization_graph_titles = ['1D Shock Tube (RK4-Standard Galerkin) ', '1D Shock Tube (TG2-One step)', '1D Shock Tube (TG2-Two step)', '1D Shock Tube (RK4-TG2 Two step)', 'RK4-TG2 Two-step and EV']
-    folder_paths = ['./RK4_standard_galerkin', './TG2_one_step', './TG2_two_step', './RK4_TG2_two_step', './RK4_TG2_two_step_EV']
-    file_names = ['RK4_standard_galerkin', 'TG2_one_step', './TG2_two_step', './RK4_TG2_two_step', './RK4_TG2_two_step_EV']
-    methods_file_name = ['RK4_galerkin', 'TG2_one_step', 'TG2_two_step', 'RK4_TG2_two_step', 'RK4_TG2_two_step_EV']
+    stabilization_graph_titles = ['1D Shock Tube (RK4-Standard Galerkin) ', '1D Shock Tube (TG2-One step)', '1D Shock Tube (TG2-Two step)', '1D Shock Tube (RK4-TG2 Two step)', 'RK4-TG2 Two-step and EV', 'RK4-TG2 Two-Step, EV and LPS']
+    folder_paths = ['./RK4_standard_galerkin', './TG2_one_step', './TG2_two_step', './RK4_TG2_two_step', './RK4_TG2_two_step_EV', './RK4_TG2_two_step_EV_LPS']
+    file_names = ['RK4_standard_galerkin', 'TG2_one_step', './TG2_two_step', './RK4_TG2_two_step', './RK4_TG2_two_step_EV', './RK4_TG2_two_step_EV_LPS']
+    methods_file_name = ['RK4_galerkin', 'TG2_one_step', 'TG2_two_step', 'RK4_TG2_two_step', 'RK4_TG2_two_step_EV', 'RK4_TG2_two_step_EV_LPS']
 
     if stabilization_choice == 1:
          stabilization_graph_title = stabilization_graph_titles[0]
@@ -73,6 +75,13 @@ def setup_simulation(t_end, stabilization_choice):
          folder_path = folder_paths[4]
          file_name = file_names[4]
          method_file_name = methods_file_name[4]
+         dt = 0.002 
+
+    elif stabilization_choice == 6:
+         stabilization_graph_title = stabilization_graph_titles[5]
+         folder_path = folder_paths[5]
+         file_name = file_names[5]
+         method_file_name = methods_file_name[5]
          dt = 0.002 
 
     if not os.path.exists(folder_path):
@@ -201,7 +210,6 @@ def run_simulation(config):
         energy = config['U'][2]
         variables_tuple = (rho, vel, final_p, energy)
 
-
     elif config['stabilization_choice'] == 2:
         for n in range (config['nstep']):
             print ('timestep is', n)
@@ -323,6 +331,55 @@ def run_simulation(config):
             # Initialize U_temp and k for the RK stages
             U_temp = [config['U'][0][:, n], config['U'][1][:, n], config['U'][2][:, n]]
             k = [None] * n_stages
+            
+            # Loop over RK stages
+            for s in range(n_stages):
+                # Update U_temp based on previous k values and Butcher tableau coefficients 'a'
+                if s == 0:
+                    U_temp_stage = U_temp  # k1 doesnt involve any manipulation to U_temp
+                else:
+                    U_temp_stage = [config['U'][var][:, n] + sum(a[s][j] * k[j][var] for j in range(s)) for var in range(len(U_temp))]
+
+                U_temp_stage = apply_boundary_conditions(U_temp_stage, config['numnp'])
+
+                M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e, F_visc = assemble_TG_two_step_EV(U_temp_stage, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], config['c_e'])
+
+                k[s] = tuple(config['dt'] * solve(M_tuple[var], (F_tuple[var] + F_visc[var])) for var in range(len(U_temp)))
+
+            for var in range(len(config['U'])):
+                config['U'][var][:, n + 1] = config['U'][var][:, n] + sum(w[s] * k[s][var] for s in range(n_stages))
+
+            # Apply boundary conditions again
+            config['U'][0][0, n+1] = 1.0
+            config['U'][0][config['numnp']-1, n+1] = 0.125
+
+            config['U'][1][0, n+1] = 0.0
+            config['U'][1][config['numnp']-1, n+1] = 0.0
+
+            config['U'][2][0, n+1] = 2.5
+            config['U'][2][config['numnp']-1, n+1] = 0.25 
+
+        rho = config['U'][0]
+        vel = config['U'][1] / config['U'][0]
+        final_p = calc_p(config['gamma'], config['U'][2], config['U'][1], config['U'][0])
+        energy = config['U'][2]
+        variables_tuple = (rho, vel, final_p, energy, entropy, entropy_flux, entropy_res, viscosity_e)
+  
+    elif config['stabilization_choice'] == 6:
+        
+        viscosity_e = np.zeros((config['numnp'], config['numnp']))
+
+        for n in range(config['nstep']):
+
+            print('timestep is', n)
+            
+            # Initialize U_temp and k for the RK stages
+            U_temp = [config['U'][0][:, n], config['U'][1][:, n], config['U'][2][:, n]]
+            k = [None] * n_stages
+
+            # Solve linear system for g (LPS method). Independent of time so can be done here no need for within RK4 steps
+            M_g_tuple, rhs_g_tuple = assemble_g_rhs_system(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'])
+            g_tuple = tuple(solve(M_g_tuple[var], rhs_g_tuple[var]) for var in range (len(M_g_tuple)))
             
             # Loop over RK stages
             for s in range(n_stages):
