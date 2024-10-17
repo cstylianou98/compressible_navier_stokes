@@ -377,9 +377,11 @@ def run_simulation(config):
             U_temp = [config['U'][0][:, n], config['U'][1][:, n], config['U'][2][:, n]]
             k = [None] * n_stages
 
+            U_temp_wth_bc = apply_boundary_conditions(U_temp, config['numnp'])
+
             # Solve linear system for g (LPS method). Independent of time so can be done here no need for within RK4 steps
-            M_g_tuple, rhs_g_tuple = assemble_g_rhs_system(U_temp, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'])
-            g_tuple = tuple(solve(M_g_tuple[var], rhs_g_tuple[var]) for var in range (len(M_g_tuple)))
+            M_g, rhs_tuple = assemble_g_rhs_system(U_temp_wth_bc, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'])
+            g_tuple = tuple(solve(M_g, rhs_tuple[var]) for var in range (len(rhs_tuple)))
             
             # Loop over RK stages
             for s in range(n_stages):
@@ -391,9 +393,9 @@ def run_simulation(config):
 
                 U_temp_stage = apply_boundary_conditions(U_temp_stage, config['numnp'])
 
-                M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e, F_visc = assemble_TG_two_step_EV(U_temp_stage, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], config['c_e'])
+                M_tuple, F_tuple, entropy, entropy_flux, entropy_res, viscosity_e, F_visc, F_lps = assemble_TG_two_step_EV_LPS(U_temp_stage, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], config['c_e'], g_tuple)
 
-                k[s] = tuple(config['dt'] * solve(M_tuple[var], (F_tuple[var] + F_visc[var])) for var in range(len(U_temp)))
+                k[s] = tuple(config['dt'] * solve(M_tuple[var], (F_tuple[var] + F_visc[var] + F_lps[var])) for var in range(len(U_temp)))
 
             for var in range(len(config['U'])):
                 config['U'][var][:, n + 1] = config['U'][var][:, n] + sum(w[s] * k[s][var] for s in range(n_stages))

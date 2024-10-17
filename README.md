@@ -143,20 +143,49 @@ $$
 s_h^{LPS,e} = v_h^{LPS,e} \int_{K^e} \nabla w_h \cdot(\nabla U_h - g_h) dx
 $$
 
+**Physically**: This term represents the contribution to stabilization that aims to reduce numerical oscillations by adjusting the gradient of the solution $U_h$. The term $g_h$ can be seen as a "projection" of the gradient $\nabla U_h$, designed to filter out higher-frequency components that may cause instability or oscillations.
+
 Where:
 
 $$
 v^{LPS,e} = \frac{\omega h^e ||f'(u_h)||_{L^\infty(K^e)}}{2p}
 $$
 
+
 With $\omega = 1$ (default) $p = 1$ (degree of FEM polynomial).
 
-Adding this to the FEM formulation leads to:
+**Physically**: This represents the strength of the stabilization. $||f'(u_h)||$ measures how fast the solution is changing. The bigger the element size $h_e$ the greater the stabilization added. Basically controls how much stabilization is applied based on how sharp variations are.
+
+
+Following this I will outline the steps in which I took to apply it in my code:
+
+- At first, I solve the system of equations $M g = rhs$. Where $M$ is the consistent mass matrix and $rhs$ is built as follows: 
+$$rhs = \sum \int N_x U_{gp}$$
+- **NOTE**: The system of equations being solved essentially solve for the projected gradient $g_h$ which is a smoother represenation of the actual gradient $U_h$. This filters out sharp oscillations and introduces smoothness.  
+- Following this a new function is created within which $v_{LPS}$ at the element is calculated using the following formula (gives SCALAR value):
+
+$$v_{LPS,e} = \frac{h||u+c||}{2}$$
+
+- Retrieve the value of g at the current element by taking g calculated before, passing it to our function and the calculating g at the gaussian point as:
+
+$$ g_{gp} = N \cdot g_{el}$$
+
+- Calculate $U_x$ at the gaussian points by:
+
+$$ U_{gpx} = N_x \cdot U_{el}$$
+
+- Form the LPS matrix that is to be added to the FEM formulation:
+
+$$ F_{LPS} = \sum \int N_x * v_{LPS,e} * (U_{gpx} - g_{gp})dx $$
+
+
+Adding this to the FEM formulation and solve.
 
 $$
 \int_{\Omega} w U_t dx - \int_{\Omega} w_x F(U) dx - \int_{\Omega} w_x F_{visc} (U) dx + v_{LPS,e} \int_{\Omega} w_x \cdot(U_x - g) dx = 0
 $$
 
+**OVERALL**: The LPS method stabilizes the solution by filtering out oscillations in the gradient. It compares the true gradient $U_x$ with a smoothed gradient $g_h$. The difference between these two is controlled by the stabilization parameter $v_{LPS,e}$ which ensures that overly sharp changes that result in numerical issues are penalized and smoothed out.
 
 
 ## Evolution of numerical method used to solve the shock tube problem:
