@@ -61,28 +61,28 @@ def setup_simulation(t_end, stabilization_choice):
          folder_path = folder_paths[2]
          file_name = file_names[2]
          method_file_name = methods_file_name[2]
-         dt = 0.002 
+         dt = 1.5*10**(-3) 
 
     elif stabilization_choice == 4:
          stabilization_graph_title = stabilization_graph_titles[3]
          folder_path = folder_paths[3]
          file_name = file_names[3]
          method_file_name = methods_file_name[3]
-         dt = 0.002 
+         dt = 1.5*10**(-3)
 
     elif stabilization_choice == 5:
          stabilization_graph_title = stabilization_graph_titles[4]
          folder_path = folder_paths[4]
          file_name = file_names[4]
          method_file_name = methods_file_name[4]
-         dt = 0.002 
+         dt = 1.5*10**(-3)
 
     elif stabilization_choice == 6:
          stabilization_graph_title = stabilization_graph_titles[5]
          folder_path = folder_paths[5]
          file_name = file_names[5]
          method_file_name = methods_file_name[5]
-         dt = 0.002 
+         dt = 1.5*10**(-3)
 
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
@@ -123,7 +123,7 @@ def setup_simulation(t_end, stabilization_choice):
     x0_analytical = numel // 2
 
     # Entropy viscosity tunable constant
-    c_e = 0.05
+    c_e = 0.4
 
 
     return {
@@ -393,7 +393,7 @@ def run_simulation(config):
 
                 U_temp_stage = apply_boundary_conditions(U_temp_stage, config['numnp'])
 
-                M_tuple, F_tuple, F_visc_tuple, F_lps_tuple = assemble_TG_two_step_EV_LPS(U_temp_stage, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], config['c_e'], g_tuple)
+                M_tuple, F_tuple, F_visc_tuple, F_lps_tuple = assemble_EV_LPS(U_temp_stage, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], config['c_e'], g_tuple)
 
                 k[s] = tuple(config['dt'] * solve(M_tuple[var], (F_tuple[var] + F_visc_tuple[var] + F_lps_tuple[var])) for var in range(len(U_temp)))
 

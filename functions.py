@@ -449,7 +449,7 @@ def assemble_g_rhs_system(U_current, numel, xnode, N_mef, Nxi_mef, wpg):
 
     return M_g, rhs
 
-def assemble_TG_two_step_EV_LPS(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt, c_e, g_tuple):
+def assemble_EV_LPS(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt, c_e, g_tuple):
     '''
     (input) U_current tuple: current solution tuple
     (input) numel int: number of elements
@@ -492,13 +492,10 @@ def assemble_TG_two_step_EV_LPS(U_current, numel, xnode, N_mef, Nxi_mef, wpg, ga
             w_ig = weight[ig]
 
             # Intergration points (Gaussian):
-            rho_gp, m_gp, rho_E_gp = gaussian_values(N, rho_el, m_el, rho_E_el)
             rho_gpx, m_gpx, rho_E_gpx = gaussian_values(Nx, rho_el, m_el, rho_E_el)
-            F_rho_gpx, F_m_gpx, F_rho_E_gpx = gaussian_values(Nx, F_rho_el, F_m_el, F_rho_E_el)
+            F_rho_gp, F_m_gp, F_rho_E_gp = gaussian_values(N, F_rho_el, F_m_el, F_rho_E_el)            
             g_rho_gp, g_m_gp, g_rho_E_gp = gaussian_values(N, g_rho_el, g_m_el, g_rho_E_el)
 
-            rho_inter, m_inter, rho_E_inter, p_inter = inter_gaussian_values(gamma, rho_gp, m_gp, rho_E_gp, dt, F_rho_gpx, F_m_gpx, F_rho_E_gpx)
-            F_rho_inter, F_m_inter, F_rho_E_inter = flux_inter_gaussian_values(rho_inter, m_inter, rho_E_inter, p_inter)
 
             entropy_gp = np.dot(N, entropy_el)
             entropy_flux_gp = np.dot(N, entropy_flux_el)
@@ -512,9 +509,9 @@ def assemble_TG_two_step_EV_LPS(U_current, numel, xnode, N_mef, Nxi_mef, wpg, ga
             M[1][np.ix_(isp, isp)] += w_ig * np.outer(N, N)
             M[2][np.ix_(isp, isp)] += w_ig * np.outer(N, N)
 
-            F[0][isp] += w_ig * (Nx * F_rho_inter)
-            F[1][isp] += w_ig * (Nx * F_m_inter)
-            F[2][isp] += w_ig * (Nx * F_rho_E_inter)
+            F[0][isp] += w_ig * (Nx * F_rho_gp)
+            F[1][isp] += w_ig * (Nx * F_m_gp)
+            F[2][isp] += w_ig * (Nx * F_rho_E_gp)
 
             F_lps[0][isp] += - w_ig * v_lps * (rho_gpx - g_rho_gp)
             F_lps[1][isp] += - w_ig  * v_lps * (m_gpx - g_m_gp)
