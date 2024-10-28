@@ -42,7 +42,7 @@ def calc_p (gamma, rho_E, m, rho):
     p = (gamma - 1) * (rho_E - (m**2)/(2*rho))
     return p
 
-def assemble_mass_matrix(numel, xnode, wpg, N_mef):
+def assemble_standard_galerkin(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma):
     '''
     (input) numel int: Number of elements
     (input) xnode arr: Array with x values 
@@ -52,85 +52,94 @@ def assemble_mass_matrix(numel, xnode, wpg, N_mef):
     (output) M: Return output with assembled M matrix
     ''' 
     numnp = numel + 1
-    M_rho = np.zeros((numnp, numnp))  # Mass matrix for rho
-    M_m = np.zeros((numnp, numnp))    # Mass matrix for m
-    M_rho_E = np.zeros((numnp, numnp))# Mass matrix for rho_E
-
-    M = (M_rho, M_m, M_rho_E)  # Tuple of mass matrices for rho, m, rho_E
+    M, F, _, _ = initialize_matrices(numnp)
 
     for i in range(numel):
         h = xnode[i + 1] - xnode[i]
         weight = wpg * h / 2
         isp = [i, i + 1]  # Global number of the nodes of the current element
 
-        ngaus = wpg.shape[0]
-        for ig in range(ngaus):
-            N = N_mef[ig, :]
-            w_ig = weight[ig]
-
-            M_rho[np.ix_(isp, isp)] += w_ig * (np.outer(N, N))
-            M_m[np.ix_(isp, isp)] += w_ig * (np.outer(N, N))
-            M_rho_E[np.ix_(isp, isp)] += w_ig * (np.outer(N, N))
-
-    M_rho[0,0] = 1
-    M_m[0,0] = 1
-    M_rho_E[0,0] = 1
-
-    M_rho[-1, -1] = 1
-    M_m[-1, -1] = 1
-    M_rho_E[-1, -1] = 1   
-
-    return M
-
-def assemble_flux_vector(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma):
-    '''
-    (input) U_current tuple: current solution tuple
-    (input) numel int: number of elements
-    (input) xnode arr: Array with x values stored
-    (input) N_mef arr: Array with the shape function 
-    (input) Nxi_mef arr: Array with shape function derivatives
-    (input) wpg arr: Array with weights 
-
-    (output) F arr: Flux value returned by function 
-    '''
-    F = (np.zeros(len(U_current[0])), np.zeros(len(U_current[1])), np.zeros(len(U_current[2])))
-
-    for i in range(numel):
-        h = xnode[i + 1] - xnode[i]
-        weight = wpg * h / 2
-        isp = [i, i + 1]
-
         # Get value of each variable at current element  
-        rho_el =  U_current[0][isp]
-        m_el =  U_current[1][isp]
-        rho_E_el = U_current[2][isp] 
-
+        rho_el, m_el, rho_E_el =  U_current[0][isp], U_current[1][isp], U_current[2][isp] 
         p_el = calc_p(gamma, rho_E_el, m_el, rho_el)
-        
-        ngaus = wpg.shape[0]
 
-        # Loop over the gaussian points
+        ngaus = wpg.shape[0]
         for ig in range(ngaus):
             N = N_mef[ig, :]
             Nx = Nxi_mef[ig, :] * 2 / h
             w_ig = weight[ig]
 
-            # Calculate values of rho, m, rho_E and p at gaussian points.
-            rho_gp = np.dot(N, rho_el)
-            m_gp = np.dot(N, m_el)
-            rho_E_gp = np.dot(N, rho_E_el)
+            rho_gp, m_gp, rho_E_gp = gaussian_values(N, rho_el, m_el, rho_E_el)
             p_gp = np.dot(N, p_el)
 
-
-            # # Calculate flux using gaussian values. OPTION 1 I DID AND IT WORKS
             F_rho_gp = m_gp
             F_m_gp = m_gp**2/rho_gp + p_gp
             F_rho_E_gp = (m_gp * (rho_E_gp + p_gp)/ rho_gp)
 
+
+            M[0][np.ix_(isp, isp)] += w_ig * (np.outer(N, N))
+            M[1][np.ix_(isp, isp)] += w_ig * (np.outer(N, N))
+            M[2][np.ix_(isp, isp)] += w_ig * (np.outer(N, N))
+
             F[0][isp] += w_ig * (Nx * F_rho_gp)
             F[1][isp] += w_ig * (Nx * F_m_gp)
             F[2][isp] += w_ig * (Nx * F_rho_E_gp)
-    return F
+
+    M[0][0,0] = 1
+    M[1][0,0] = 1
+    M[2][0,0] = 1
+
+    M[0][-1, -1] = 1
+    M[1][-1, -1] = 1
+    M[2][-1, -1] = 1   
+
+    return M, F
+
+# def assemble_flux_vector(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma):
+#     '''
+#     (input) U_current tuple: current solution tuple
+#     (input) numel int: number of elements
+#     (input) xnode arr: Array with x values stored
+#     (input) N_mef arr: Array with the shape function 
+#     (input) Nxi_mef arr: Array with shape function derivatives
+#     (input) wpg arr: Array with weights 
+
+#     (output) F arr: Flux value returned by function 
+#     '''
+#     F = (np.zeros(len(U_current[0])), np.zeros(len(U_current[1])), np.zeros(len(U_current[2])))
+
+#     for i in range(numel):
+#         h = xnode[i + 1] - xnode[i]
+#         weight = wpg * h / 2
+#         isp = [i, i + 1]
+
+#         # Get value of each variable at current element  
+#         rho_el, m_el, rho_E_el =  U_current[0][isp], U_current[1][isp], U_current[2][isp] 
+
+#         p_el = calc_p(gamma, rho_E_el, m_el, rho_el)
+        
+#         ngaus = wpg.shape[0]
+
+#         # Loop over the gaussian points
+#         for ig in range(ngaus):
+#             N = N_mef[ig, :]
+#             Nx = Nxi_mef[ig, :] * 2 / h
+#             w_ig = weight[ig]
+
+#             # Calculate values of rho, m, rho_E and p at gaussian points.
+#             rho_gp, m_gp, rho_E_gp = gaussian_values(N, rho_el, m_el, rho_E_el)
+#             p_gp = np.dot(N, p_el)
+
+
+#             # # Calculate flux using gaussian values. OPTION 1 I DID AND IT WORKS
+#             F_rho_gp = m_gp
+#             F_m_gp = m_gp**2/rho_gp + p_gp
+#             F_rho_E_gp = (m_gp * (rho_E_gp + p_gp)/ rho_gp)
+
+#             F[0][isp] += w_ig * (Nx * F_rho_gp)
+#             F[1][isp] += w_ig * (Nx * F_m_gp)
+#             F[2][isp] += w_ig * (Nx * F_rho_E_gp)
+#     return F
 
 def apply_boundary_conditions(U_temp, numnp):
     '''
@@ -183,15 +192,7 @@ def assemble_TG_one_step(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt
     '''
     numnp = numel + 1
 
-    M_rho = np.zeros((numnp, numnp))
-    M_m = np.zeros((numnp, numnp))
-    M_rho_E = np.zeros((numnp, numnp))
-    M = (M_rho, M_m, M_rho_E)
-
-    F_rho = np.zeros(numnp)
-    F_m = np.zeros(numnp)
-    F_rho_E = np.zeros(numnp)
-    F = (F_rho, F_m, F_rho_E)
+    M, F, _, _ = initialize_matrices(numnp)
 
     K_rho = np.zeros((numnp, numnp))
     K_m = np.zeros((numnp, numnp))
@@ -206,50 +207,37 @@ def assemble_TG_one_step(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt
         isp = [i, i + 1]  # Global number of the nodes of the current element
 
         # Get value of each variable at current element  
-        rho_el =  U_current[0][isp]
-        m_el =  U_current[1][isp]
-        rho_E_el = U_current[2][isp] 
-        p_el = calc_p(gamma, rho_E_el, m_el, rho_el)
-        
+        rho_el, m_el, rho_E_el =  U_current[0][isp], U_current[1][isp], U_current[2][isp] 
+        p_el, _, _, F_rho_el, F_m_el, F_rho_E_el = calculate_element_properties(gamma, rho_el, m_el, rho_E_el)
+
         ngaus = wpg.shape[0]
-
-        F_rho_el = m_el
-        F_m_el = m_el**2/rho_el + p_el
-        F_rho_E_el = (m_el * (rho_E_el + p_el)/ rho_el)
-
         for ig in range(ngaus):
             N = N_mef[ig, :]
             Nx = Nxi_mef[ig, :] * 2 / h
             w_ig = weight[ig]
 
             # # Calculate values of rho, m, rho_E and p and their derivatives at the gaussian points.
-            rho_gp = np.dot(N, rho_el)
-            m_gp = np.dot(N, m_el)
-            rho_E_gp = np.dot(N, rho_E_el)
+            rho_gp, m_gp, rho_E_gp = gaussian_values(N, rho_el, m_el, rho_E_el)
             p_gp = np.dot(N, p_el)
+            u_gp = m_gp/rho_gp
 
-            # Calculate flux using gaussian values
-            vel_gp = m_gp/rho_gp
-
-
-            # if, elif used to check if velocity is positive or negative. For compression regions dv/dx < 0 we take the linear approximation.
-            if vel_gp >= 0:
+            # Used to check if velocity is positive or negative. For compression regions dv/dx < 0 we take the linear approximation.
+            if u_gp >= 0:
                 F_rho_gp = m_gp
                 F_m_gp = m_gp**2/rho_gp + p_gp
                 F_rho_E_gp = (m_gp * (rho_E_gp + p_gp)/ rho_gp)
 
-            elif vel_gp <0:
-                F_rho_gp = np.dot(N, F_rho_el)
-                F_m_gp = np.dot(N, F_m_el)
-                F_rho_E_gp = np.dot(N, F_rho_E_el)
+            elif u_gp <0:
+                F_rho_gp, F_m_gp, F_rho_E_gp = gaussian_values(N, F_rho_el, F_m_el, F_rho_E_el)
 
-            M_rho[np.ix_(isp, isp)] += w_ig * np.outer(N, N)
-            M_m[np.ix_(isp, isp)] += w_ig * np.outer(N, N)
-            M_rho_E[np.ix_(isp, isp)] += w_ig * np.outer(N, N)
 
-            F_rho[isp] += w_ig * ( F_rho_gp * Nx )
-            F_m[isp] += w_ig * ( F_m_gp * Nx )
-            F_rho_E[isp] += w_ig * ( F_rho_E_gp * Nx )
+            M[0][np.ix_(isp, isp)] += w_ig * np.outer(N, N)
+            M[1][np.ix_(isp, isp)] += w_ig * np.outer(N, N)
+            M[2][np.ix_(isp, isp)] += w_ig * np.outer(N, N)
+
+            F[0][isp] += w_ig * ( F_rho_gp * Nx )
+            F[1][isp] += w_ig * ( F_m_gp * Nx )
+            F[2][isp] += w_ig * ( F_rho_E_gp * Nx )
 
 
             A = compute_jacobian(rho_gp, m_gp, rho_E_gp, gamma)
@@ -267,13 +255,13 @@ def assemble_TG_one_step(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt
                                           A_squared[1, 2] *(np.outer(Nx, Nx)) +  
                                           A_squared[2, 2] *(np.outer(Nx, Nx)))
             
-    M_rho[0,0] = 1
-    M_m[0,0] = 1
-    M_rho_E[0,0] = 1
+    M[0][0,0] = 1
+    M[1][0,0] = 1
+    M[2][0,0] = 1
 
-    M_rho[-1, -1] = 1
-    M_m[-1, -1] = 1
-    M_rho_E[-1, -1] = 1  
+    M[0][-1, -1] = 1
+    M[1][-1, -1] = 1
+    M[2][-1, -1] = 1  
             
     return M, F, K
 
@@ -293,15 +281,7 @@ def assemble_TG_two_step(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt
     '''
     numnp = numel + 1
 
-    M_rho = np.zeros((numnp, numnp))
-    M_m = np.zeros((numnp, numnp))
-    M_rho_E = np.zeros((numnp, numnp))
-    M = (M_rho, M_m, M_rho_E)
-
-    F_rho = np.zeros(numnp)
-    F_m = np.zeros(numnp)
-    F_rho_E = np.zeros(numnp)
-    F = (F_rho, F_m, F_rho_E)
+    M, F, _, _ = initialize_matrices(numnp)
 
     for i in range(numel):
         h = xnode[i + 1] - xnode[i]
@@ -309,59 +289,38 @@ def assemble_TG_two_step(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt
         isp = [i, i + 1]  # Global number of the nodes of the current element
 
         # Get value of each variable at current element  
-        rho_el =  U_current[0][isp]
-        m_el =  U_current[1][isp]
-        rho_E_el = U_current[2][isp] 
-        p_el = calc_p(gamma, rho_E_el, m_el, rho_el)
+        rho_el, m_el, rho_E_el =  U_current[0][isp], U_current[1][isp], U_current[2][isp]  
+
+        p_el, _, _, F_rho_el, F_m_el, F_rho_E_el = calculate_element_properties(gamma, rho_el, m_el, rho_E_el)
 
         ngaus = wpg.shape[0]
-
-        F_rho_el = m_el
-        F_m_el = m_el**2/rho_el + p_el
-        F_rho_E_el = (m_el * (rho_E_el + p_el)/ rho_el)
-
-        
         for ig in range(ngaus):
             N = N_mef[ig, :]
             Nx = Nxi_mef[ig, :] * 2 / h
             w_ig = weight[ig]
 
-            # Intermediate value at integration(Gaussian) point:
-            rho_gp = np.dot(N, rho_el)
-            m_gp = np.dot(N, m_el)
-            rho_E_gp = np.dot(N, rho_E_el)
+            # Intergration points (Gaussian):
+            rho_gp, m_gp, rho_E_gp = gaussian_values(N, rho_el, m_el, rho_E_el)
+            F_rho_gpx, F_m_gpx, F_rho_E_gpx = gaussian_values(Nx, F_rho_el, F_m_el, F_rho_E_el)
 
-            F_rho_gpx = np.dot(Nx, F_rho_el)
-            F_m_gpx = np.dot(Nx, F_m_el)
-            F_rho_E_gpx = np.dot(Nx, F_rho_E_el)
+            rho_inter, m_inter, rho_E_inter, p_inter = inter_gaussian_values(gamma, rho_gp, m_gp, rho_E_gp, dt, F_rho_gpx, F_m_gpx, F_rho_E_gpx)
+            F_rho_inter, F_m_inter, F_rho_E_inter = flux_inter_gaussian_values(rho_inter, m_inter, rho_E_inter, p_inter)
 
-            rho_inter = rho_gp - 0.5 * dt * F_rho_gpx
-            m_inter = m_gp - 0.5 * dt * F_m_gpx
-            rho_E_inter = rho_E_gp - 0.5 * dt * F_rho_E_gpx
-            p_inter = calc_p(gamma, rho_E_inter, m_inter, rho_inter)
+            M[0][np.ix_(isp, isp)] += w_ig * np.outer(N, N)
+            M[1][np.ix_(isp, isp)] += w_ig * np.outer(N, N)
+            M[2][np.ix_(isp, isp)] += w_ig * np.outer(N, N)
 
-            F_rho_inter = m_inter
-            F_m_inter = m_inter**2/ rho_inter + p_inter
-            F_rho_E_inter = (m_inter * (rho_E_inter + p_inter)/ rho_inter)
-            
+            F[0][isp] += w_ig * (Nx * F_rho_inter)
+            F[1][isp] += w_ig * (Nx * F_m_inter)
+            F[2][isp] += w_ig * (Nx * F_rho_E_inter)
 
-            M_rho[np.ix_(isp, isp)] += w_ig * np.outer(N, N)
-            M_m[np.ix_(isp, isp)] += w_ig * np.outer(N, N)
-            M_rho_E[np.ix_(isp, isp)] += w_ig * np.outer(N, N)
+    M[0][0,0] = 1
+    M[1][0,0] = 1
+    M[2][0,0] = 1
 
-            F_rho[isp] += w_ig * (Nx * F_rho_inter)
-            F_m[isp] += w_ig * (Nx * F_m_inter)
-            F_rho_E[isp] += w_ig * (Nx * F_rho_E_inter)
-
-
-    M_rho[0,0] = 1
-    M_m[0,0] = 1
-    M_rho_E[0,0] = 1
-
-    M_rho[-1, -1] = 1
-    M_m[-1, -1] = 1
-    M_rho_E[-1, -1] = 1  
-
+    M[0][-1, -1] = 1
+    M[1][-1, -1] = 1
+    M[2][-1, -1] = 1  
 
     return M, F
 
@@ -380,20 +339,9 @@ def assemble_TG_two_step_EV(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma,
     '''
     numnp = numel + 1
 
-    M_rho = np.zeros((numnp, numnp))
-    M_m = np.zeros((numnp, numnp))
-    M_rho_E = np.zeros((numnp, numnp))
-    M = (M_rho, M_m, M_rho_E)
+    M, F, F_visc, _ = initialize_matrices(numnp)
 
-    F_rho = np.zeros(numnp)
-    F_m = np.zeros(numnp)
-    F_rho_E = np.zeros(numnp)
-    F = (F_rho, F_m, F_rho_E)
-
-    entropy = np.zeros(numnp)
-    entropy_flux = np.zeros(numnp)
-    entropy_res = np.zeros(numnp)
-    viscosity_e = np.zeros(numnp)
+    entropy, entropy_flux, entropy_res, viscosity_e = np.zeros(numnp), np.zeros(numnp), np.zeros(numnp), np.zeros(numnp) 
 
     for i in range(numel):
         h = xnode[i + 1] - xnode[i]
@@ -401,76 +349,51 @@ def assemble_TG_two_step_EV(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma,
         isp = [i, i + 1]  # Global number of the nodes of the current element
 
         # Get value of each variable at current element  
-        rho_el =  U_current[0][isp]
-        m_el =  U_current[1][isp]
-        rho_E_el = U_current[2][isp] 
-        p_el = calc_p(gamma, rho_E_el, m_el, rho_el)
+        rho_el, m_el, rho_E_el =  U_current[0][isp], U_current[1][isp], U_current[2][isp] 
 
-        ngaus = wpg.shape[0]
+        p_el, u_el, _, F_rho_el, F_m_el, F_rho_E_el = calculate_element_properties(gamma, rho_el, m_el, rho_E_el)
 
-        F_rho_el = m_el
-        F_m_el = m_el**2/rho_el + p_el
-        F_rho_E_el = (m_el * (rho_E_el + p_el)/ rho_el)
-
-        u_el = m_el/rho_el
         entropy_el = rho_el/(gamma-1) * np.log(p_el/rho_el**gamma)
         entropy_flux_el = entropy_el * u_el
 
+        ngaus = wpg.shape[0]
         for ig in range(ngaus):
             N = N_mef[ig, :]
             Nx = Nxi_mef[ig, :] * 2 / h
             w_ig = weight[ig]
 
             # Intermediate value at integration(Gaussian) point:
-            rho_gp = np.dot(N, rho_el)
-            m_gp = np.dot(N, m_el)
-            rho_E_gp = np.dot(N, rho_E_el)
+            rho_gp, m_gp, rho_E_gp = gaussian_values(N, rho_el, m_el, rho_E_el)
+            F_rho_gpx, F_m_gpx, F_rho_E_gpx = gaussian_values(Nx, F_rho_el, F_m_el, F_rho_E_el)
 
-            F_rho_gpx = np.dot(Nx, F_rho_el)
-            F_m_gpx = np.dot(Nx, F_m_el)
-            F_rho_E_gpx = np.dot(Nx, F_rho_E_el)
+            rho_inter, m_inter, rho_E_inter, p_inter = inter_gaussian_values(gamma, rho_gp, m_gp, rho_E_gp, dt, F_rho_gpx, F_m_gpx, F_rho_E_gpx)
+            F_rho_inter, F_m_inter, F_rho_E_inter = flux_inter_gaussian_values(rho_inter, m_inter, rho_E_inter, p_inter)
 
-            rho_inter = rho_gp - 0.5 * dt * F_rho_gpx
-            m_inter = m_gp - 0.5 * dt * F_m_gpx
-            rho_E_inter = rho_E_gp - 0.5 * dt * F_rho_E_gpx
-            p_inter = calc_p(gamma, rho_E_inter, m_inter, rho_inter)
-
-            F_rho_inter = m_inter
-            F_m_inter = m_inter**2/ rho_inter + p_inter
-            F_rho_E_inter = (m_inter * (rho_E_inter + p_inter)/ rho_inter)
-            
             entropy_gp = np.dot(N, entropy_el)
             entropy_flux_gp = np.dot(N, entropy_flux_el)
             entropy_flux_gpx = np.dot(Nx, entropy_flux_el)
 
-            M_rho[np.ix_(isp, isp)] += w_ig * np.outer(N, N)
-            M_m[np.ix_(isp, isp)] += w_ig * np.outer(N, N)
-            M_rho_E[np.ix_(isp, isp)] += w_ig * np.outer(N, N)
+            M[0][np.ix_(isp, isp)] += w_ig * np.outer(N, N)
+            M[1][np.ix_(isp, isp)] += w_ig * np.outer(N, N)
+            M[2][np.ix_(isp, isp)] += w_ig * np.outer(N, N)
 
-            F_rho[isp] += w_ig * (Nx * F_rho_inter)
-            F_m[isp] += w_ig * (Nx * F_m_inter)
-            F_rho_E[isp] += w_ig * (Nx * F_rho_E_inter)
+            F[0][isp] += w_ig * (Nx * F_rho_inter)
+            F[1][isp] += w_ig * (Nx * F_m_inter)
+            F[2][isp] += w_ig * (Nx * F_rho_E_inter)
 
             entropy[isp] += w_ig * entropy_gp 
             entropy_flux[isp] += w_ig * entropy_flux_gp
             entropy_res[isp] += w_ig * entropy_flux_gpx
             
+    M[0][0,0] = 1
+    M[1][0,0] = 1
+    M[2][0,0] = 1
 
-    M_rho[0,0] = 1
-    M_m[0,0] = 1
-    M_rho_E[0,0] = 1
-
-    M_rho[-1, -1] = 1
-    M_m[-1, -1] = 1
-    M_rho_E[-1, -1] = 1  
+    M[0][-1, -1] = 1
+    M[1][-1, -1] = 1
+    M[2][-1, -1] = 1  
 
     viscosity_e = c_e * np.abs((h**2 * entropy_res)/np.abs((np.max(entropy)-np.min(entropy))))
-
-    ## Building F_viscosity matrix
-    F_visc_rho = np.zeros(numnp)
-    F_visc_m = np.zeros(numnp)
-    F_visc_rho_E = np.zeros(numnp)
-    F_visc = (F_visc_rho, F_visc_m, F_visc_rho_E)
 
     for i in range(numel):
         h = xnode[i + 1] - xnode[i]
@@ -478,16 +401,14 @@ def assemble_TG_two_step_EV(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma,
         isp = [i, i + 1]  # Global number of the nodes of the current element
 
         # Get value of each variable at current element  
-        rho_el =  U_current[0][isp]
-        m_el =  U_current[1][isp]
-        rho_E_el = U_current[2][isp] 
+        rho_el, m_el, rho_E_el =  U_current[0][isp], U_current[1][isp], U_current[2][isp]
 
         p_el = calc_p(gamma, rho_E_el, m_el, rho_el)
         u_el = m_el/rho_el
 
-        c = np.sqrt(gamma * (p_el/rho_el)) 
+        c_e = np.sqrt(gamma * (p_el/rho_el)) 
 
-        viscosity_el_1 = 0.5 * h * ( np.max(np.abs(u_el) + c))
+        viscosity_el_1 = 0.5 * h * ( np.max(np.abs(u_el) + c_e))
         viscosity_el_2 =  viscosity_e[isp]
         viscosity_el = np.minimum(viscosity_el_1, viscosity_el_2) # because at a shock viscosity_el_2 is huge so viscosity_el_1 must be taken 
         kinematic_visc_el = viscosity_el/rho_el
@@ -511,9 +432,9 @@ def assemble_TG_two_step_EV(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma,
             kappa_gp = np.dot(N, kappa_el)
             temp_gpx = np.dot(Nx, temp_el)
 
-            F_visc_rho[isp] +=   - w_ig * (Nx * kinematic_visc_gp * rho_gpx)
-            F_visc_m[isp] +=  - w_ig * (Nx * viscosity_gp * u_gpx)
-            F_visc_rho_E[isp] += - w_ig * Nx * ((viscosity_gp * u_gpx * u_gp + kappa_gp * temp_gpx))
+            F_visc[0][isp] +=   - w_ig * (Nx * kinematic_visc_gp * rho_gpx)
+            F_visc[1][isp] +=  - w_ig * (Nx * viscosity_gp * u_gpx)
+            F_visc[2][isp] += - w_ig * Nx * ((viscosity_gp * u_gpx * u_gp + kappa_gp * temp_gpx))
 
     return M, F, entropy, entropy_flux, entropy_res, viscosity_e, F_visc
 
@@ -623,7 +544,6 @@ def assemble_TG_two_step_EV_LPS(U_current, numel, xnode, N_mef, Nxi_mef, wpg, ga
             g_rho_gp, g_m_gp, g_rho_E_gp = gaussian_values(N, g_rho_el, g_m_el, g_rho_E_el)
 
             rho_inter, m_inter, rho_E_inter, p_inter = inter_gaussian_values(gamma, rho_gp, m_gp, rho_E_gp, dt, F_rho_gpx, F_m_gpx, F_rho_E_gpx)
-
             F_rho_inter, F_m_inter, F_rho_E_inter = flux_inter_gaussian_values(rho_inter, m_inter, rho_E_inter, p_inter)
 
             entropy_gp = np.dot(N, entropy_el)

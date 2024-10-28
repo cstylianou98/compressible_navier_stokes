@@ -177,7 +177,6 @@ def run_simulation(config):
             # Initialize U_temp and k for the RK stages
             U_temp = [config['U'][0][:, n], config['U'][1][:, n], config['U'][2][:, n]]
             k = [None] * n_stages
-            M_tuple = assemble_mass_matrix(config['numel'], config['xnode'], config['wpg'], config['N_mef'])
 
             for s in range(n_stages):
                 # update U_temp based on previous k values and Butcher tableau coefficients 'a'
@@ -188,7 +187,7 @@ def run_simulation(config):
                     U_temp_stage = [config['U'][var][:, n] + sum(a[s][j] * k[j][var] for j in range(s)) for var in range(len(U_temp))]
 
                 U_temp_stage = apply_boundary_conditions(U_temp_stage, config['numnp'])
-                F_tuple = assemble_flux_vector(U_temp_stage, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'])
+                M_tuple, F_tuple = assemble_standard_galerkin(U_temp_stage, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'])
                 k[s] = tuple(config['dt'] * solve(M_tuple[var], F_tuple[var]) for var in range(len(U_temp)))
 
             for var in range(len(config['U'])):
