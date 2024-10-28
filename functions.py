@@ -95,52 +95,6 @@ def assemble_standard_galerkin(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gam
 
     return M, F
 
-# def assemble_flux_vector(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma):
-#     '''
-#     (input) U_current tuple: current solution tuple
-#     (input) numel int: number of elements
-#     (input) xnode arr: Array with x values stored
-#     (input) N_mef arr: Array with the shape function 
-#     (input) Nxi_mef arr: Array with shape function derivatives
-#     (input) wpg arr: Array with weights 
-
-#     (output) F arr: Flux value returned by function 
-#     '''
-#     F = (np.zeros(len(U_current[0])), np.zeros(len(U_current[1])), np.zeros(len(U_current[2])))
-
-#     for i in range(numel):
-#         h = xnode[i + 1] - xnode[i]
-#         weight = wpg * h / 2
-#         isp = [i, i + 1]
-
-#         # Get value of each variable at current element  
-#         rho_el, m_el, rho_E_el =  U_current[0][isp], U_current[1][isp], U_current[2][isp] 
-
-#         p_el = calc_p(gamma, rho_E_el, m_el, rho_el)
-        
-#         ngaus = wpg.shape[0]
-
-#         # Loop over the gaussian points
-#         for ig in range(ngaus):
-#             N = N_mef[ig, :]
-#             Nx = Nxi_mef[ig, :] * 2 / h
-#             w_ig = weight[ig]
-
-#             # Calculate values of rho, m, rho_E and p at gaussian points.
-#             rho_gp, m_gp, rho_E_gp = gaussian_values(N, rho_el, m_el, rho_E_el)
-#             p_gp = np.dot(N, p_el)
-
-
-#             # # Calculate flux using gaussian values. OPTION 1 I DID AND IT WORKS
-#             F_rho_gp = m_gp
-#             F_m_gp = m_gp**2/rho_gp + p_gp
-#             F_rho_E_gp = (m_gp * (rho_E_gp + p_gp)/ rho_gp)
-
-#             F[0][isp] += w_ig * (Nx * F_rho_gp)
-#             F[1][isp] += w_ig * (Nx * F_m_gp)
-#             F[2][isp] += w_ig * (Nx * F_rho_E_gp)
-#     return F
-
 def apply_boundary_conditions(U_temp, numnp):
     '''
     (input) U tuple: List of solution arrays at specific timestep
