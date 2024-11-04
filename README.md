@@ -152,7 +152,13 @@ v^{LPS,e} = \frac{\omega h^e ||f'(u_h)||_{L^\infty(K^e)}}{2p}
 $$
 
 
-With $\omega = 1$ (default) $p = 1$ (degree of FEM polynomial).
+With $\omega = 1$ (default) $p = 1$ (degree of FEM polynomial). 
+
+In essence the $v^{LPS,e}$ described above is none other than just the upwind viscosity in our 1D code:
+
+$$
+v^{UPW} = \frac{h^e \max (|u_{el}| + c_{el})}{2}
+$$
 
 **Physically**: This represents the strength of the stabilization. $||f'(u_h)||$ measures how fast the solution is changing. The bigger the element size $h_e$ the greater the stabilization added. Basically controls how much stabilization is applied based on how sharp variations are.
 
@@ -162,9 +168,7 @@ Following this I will outline the steps in which I took to apply it in my code:
 - At first, I solve the system of equations $M g = rhs$. Where $M$ is the consistent mass matrix and $rhs$ is built as follows: 
 $$rhs = \sum \int N_x U_{gp}$$
 - **NOTE**: The system of equations being solved essentially solve for the projected gradient $g_h$ which is a smoother represenation of the actual gradient $U_h$. This filters out sharp oscillations and introduces smoothness.  
-- Following this a new function is created within which $v_{LPS}$ at the element is calculated using the following formula (gives SCALAR value):
-
-$$v_{LPS,e} = \frac{h||u+c||}{2}$$
+- Following this the upwind viscosity is calculated at the element, $v^{UPW}$:
 
 - Retrieve the value of g at the current element by taking g calculated before, passing it to our function and the calculating g at the gaussian point as:
 
@@ -176,13 +180,13 @@ $$ U_{gpx} = N_x \cdot U_{el}$$
 
 - Form the LPS matrix that is to be added to the FEM formulation:
 
-$$ F_{LPS} = \sum \int N_x * v_{LPS,e} * (U_{gpx} - g_{gp})dx $$
+$$ F_{LPS} = - \sum \int N_x * v_{UPW,e} * (U_{gpx} - g_{gp})dx $$
 
 
-Adding this to the FEM formulation and solve.
+The overall system of equations is complete and solved:
 
 $$
-\int_{\Omega} w U_t dx - \int_{\Omega} w_x F(U) dx - \int_{\Omega} w_x F_{visc} (U) dx + v_{LPS,e} \int_{\Omega} w_x \cdot(U_x - g) dx = 0
+M U_t = F + F_{visc} + F_{LPS}
 $$
 
 **OVERALL**: The LPS method stabilizes the solution by filtering out oscillations in the gradient. It compares the true gradient $U_x$ with a smoothed gradient $g_h$. The difference between these two is controlled by the stabilization parameter $v_{LPS,e}$ which ensures that overly sharp changes that result in numerical issues are penalized and smoothed out.
@@ -236,5 +240,13 @@ Reducing this tunable constant c_e from =1 to =0.05 we get the following comprom
 <br>
 <div>
     <img src="./RK4_TG2_two_step_EV/RK4_TG2_two_step_EV_t_end=0.2_c_e=0.05.png" alt="RK4 TG2 two-step t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
+</div>
+<br>
+
+Thereafter, leaving the TG2 two step method behind, the next idea is to combine the Entropy Viscosity with the LPS projection method. With a tunable constant we get the following promising results:
+
+<br>
+<div>
+    <img src="./RK4_EV_LPS/RK4_EV_LPS_t_end=0.2_c_e=0.4.png" alt="RK4 TG2 two-step t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
 </div>
 <br>

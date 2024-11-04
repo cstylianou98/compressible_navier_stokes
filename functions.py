@@ -433,16 +433,15 @@ def assemble_g_rhs_system(U_current, numel, xnode, N_mef, Nxi_mef, wpg):
             Nx = Nxi_mef[ig, :] * 2 / h
             w_ig = weight[ig]
 
-            rho_gp = np.dot(N, rho_el)
-            m_gp = np.dot(N, m_el)
-            rho_E_gp = np.dot(N, rho_E_el)
-            
+            rho_gpx = np.dot(Nx, rho_el)
+            m_gpx = np.dot(Nx, m_el)
+            rho_E_gpx = np.dot(Nx, rho_E_el)
+        
             M_g[np.ix_(isp, isp)] += w_ig * np.outer(N, N)
 
-            rhs_rho[isp] += w_ig * (Nx * rho_gp)
-            rhs_m[isp] += w_ig * (Nx * m_gp)
-            rhs_rho_E[isp] += w_ig * (Nx * rho_E_gp)
-
+            rhs_rho[isp] += w_ig * (N * rho_gpx)
+            rhs_m[isp] += w_ig * (N  * m_gpx)
+            rhs_rho_E[isp] += w_ig * (N * rho_E_gpx)
 
     M_g[0,0] = 1
     M_g[-1, -1] = 1
@@ -483,7 +482,7 @@ def assemble_EV_LPS(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt, c_e
         entropy_el = rho_el/(gamma-1) * np.log(p_el/rho_el**gamma)
         entropy_flux_el = entropy_el * u_el
 
-        v_lps = (h*np.max(np.abs(u_el) + c_el))/2
+        v_upw = (h*np.max(np.abs(u_el) + c_el))/2
 
         ngaus = wpg.shape[0]
         for ig in range(ngaus):
@@ -513,9 +512,11 @@ def assemble_EV_LPS(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt, c_e
             F[1][isp] += w_ig * (Nx * F_m_gp)
             F[2][isp] += w_ig * (Nx * F_rho_E_gp)
 
-            F_lps[0][isp] += - w_ig * v_lps * (rho_gpx - g_rho_gp)
-            F_lps[1][isp] += - w_ig  * v_lps * (m_gpx - g_m_gp)
-            F_lps[2][isp] += - w_ig * v_lps * (rho_E_gpx - g_rho_E_gp)
+
+            F_lps[0][isp] += - w_ig * v_upw * Nx * (rho_gpx - g_rho_gp)
+            F_lps[1][isp] += - w_ig  * v_upw * Nx * (m_gpx - g_m_gp)
+            F_lps[2][isp] += - w_ig * v_upw * Nx * (rho_E_gpx - g_rho_E_gp)
+
            
     M[0][0,0] = 1
     M[1][0,0] = 1
@@ -759,6 +760,7 @@ def plot_solution(t_end, variables_tuple , config, analytic, rho_energy_analytic
     ax[1, 1].set_xticks([i * 0.1 for i in range(11)])
     ax[1, 1].set_ylim([-0.10, 3.05])
 
+    plt.suptitle(f"{config['stabilization_graph_title']}")
     plt.savefig(f"./{config['folder_path']}/{config['method_file_name']}_t_end={t_end}{file_c_e}.png")
     plt.close()
 

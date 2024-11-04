@@ -14,8 +14,8 @@ def configure_simulation():
           "2. Taylor Galerkin (TG2) One-Step \n"
           "3. Taylor Galerkin (TG2) Two-Step \n"
           "4. RK4 with Taylor Galerkin Two-Step \n"
-          "5. RK4 with Taylor Galerkin Two-Step and Entropy Viscosity \n"
-          "6. RK4 with Taylor Galerkin Two-Step, EV and LPS \n"
+          "5. RK4 with Taylor Galerkin Two-Step and EV stabilization \n"
+          "6. RK4 with EV and LPS stabilization \n"
           "\nType your choice here -----> "
      ))
 
@@ -26,8 +26,8 @@ def configure_simulation():
           "2. Taylor Galerkin (TG2) One-Step \n"
           "3. Taylor Galerkin (TG2) Two-Step \n"
           "4. RK4 with Taylor Galerkin (TG2) Two-Step \n"
-          "5. RK4 with Taylor Galerkin Two-Step and Entropy Viscosity \n"
-          "6. RK4 with Taylor Galerkin Two-Step, EV and LPS \n"
+          "5. RK4 with Taylor Galerkin Two-Step and EV stabilization \n"
+          "6. RK4 with EV and LPS stabilization \n"
           "\nType your choice here -----> "
           ))
      return t_end, stabilization_choice
@@ -36,10 +36,11 @@ def configure_simulation():
 def setup_simulation(t_end, stabilization_choice):
     variables_titles = ['- Density', '- Velocity', '- Pressure', '- Energy']
     y_axis_labels = ['rho', 'v', 'p', 'E']
-    stabilization_graph_titles = ['1D Shock Tube (RK4-Standard Galerkin) ', '1D Shock Tube (TG2-One step)', '1D Shock Tube (TG2-Two step)', '1D Shock Tube (RK4-TG2 Two step)', 'RK4-TG2 Two-step and EV', 'RK4-TG2 Two-Step, EV and LPS']
-    folder_paths = ['./RK4_standard_galerkin', './TG2_one_step', './TG2_two_step', './RK4_TG2_two_step', './RK4_TG2_two_step_EV', './RK4_TG2_two_step_EV_LPS']
-    file_names = ['RK4_standard_galerkin', 'TG2_one_step', './TG2_two_step', './RK4_TG2_two_step', './RK4_TG2_two_step_EV', './RK4_TG2_two_step_EV_LPS']
-    methods_file_name = ['RK4_galerkin', 'TG2_one_step', 'TG2_two_step', 'RK4_TG2_two_step', 'RK4_TG2_two_step_EV', 'RK4_TG2_two_step_EV_LPS']
+    stabilization_graph_titles = ['1D Shock Tube (RK4-Standard Galerkin) ', '1D Shock Tube (TG2-One step)', '1D Shock Tube (TG2-Two step)', '1D Shock Tube (RK4-TG2 Two step)', 'RK4-TG2 Two-step and EV', 'RK4, EV and LPS stabilization']
+    folder_paths = ['./RK4_standard_galerkin', './TG2_one_step', './TG2_two_step', './RK4_TG2_two_step', './RK4_TG2_two_step_EV', './RK4_EV_LPS']
+    file_names = ['RK4_standard_galerkin', 'TG2_one_step', './TG2_two_step', './RK4_TG2_two_step', './RK4_TG2_two_step_EV', './RK4_EV_LPS']
+    methods_file_name = ['RK4_galerkin', 'TG2_one_step', 'TG2_two_step', 'RK4_TG2_two_step', 'RK4_TG2_two_step_EV', 'RK4_EV_LPS']
+    init_problem_name = ['shock', 'explosion']
 
     if stabilization_choice == 1:
          stabilization_graph_title = stabilization_graph_titles[0]
@@ -123,7 +124,7 @@ def setup_simulation(t_end, stabilization_choice):
     x0_analytical = numel // 2
 
     # Entropy viscosity tunable constant
-    c_e = 0.4
+    c_e = 1
 
 
     return {
@@ -135,6 +136,7 @@ def setup_simulation(t_end, stabilization_choice):
          'folder_path': folder_path,
          'file_name': file_name,
          'method_file_name': method_file_name,
+         'init_problem_name': init_problem_name,
          'L': L,
          'xnode': xnode,
          'numel': numel,
@@ -396,6 +398,7 @@ def run_simulation(config):
                 M_tuple, F_tuple, F_visc_tuple, F_lps_tuple = assemble_EV_LPS(U_temp_stage, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], config['c_e'], g_tuple)
 
                 k[s] = tuple(config['dt'] * solve(M_tuple[var], (F_tuple[var] + F_visc_tuple[var] + F_lps_tuple[var])) for var in range(len(U_temp)))
+
 
 
             for var in range(len(config['U'])):
