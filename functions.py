@@ -7,9 +7,8 @@ from scipy.optimize import newton
 
 from matplotlib.animation import FuncAnimation
 
-## NUMERIC CALCULATION FUNCTIONS
-def U_init(xnode, numnp):
-    '''Initial condition of Burgers Equation
+def U_init_shock_tube(xnode, numnp):
+    '''Initial condition of Shock Wave Problem
     (input) xnode arr: Array with x values stored 
     (input) numnp int: Number of nodes
 
@@ -28,6 +27,32 @@ def U_init(xnode, numnp):
             U[1][i] = 0
             U[2][i] = 0.25
     return U
+
+
+def U_init_explosion(xnode, numnp, gamma=1.4):
+    '''Initial condition for a 1D explosion problem with high pressure in the middle.
+    (input) xnode arr: Array with x values stored 
+    (input) numnp int: Number of nodes
+    (input) gamma float: Ratio of specific heats
+
+    (output) U tuple: U tuple stores initial conditions for each of the three variables investigated.
+    '''
+    
+    U = (np.zeros(numnp), np.zeros(numnp), np.zeros(numnp))  # rho, momentum, energy
+
+    for i in range(numnp):
+        if 0.6 <= xnode[i] <= 1.4:  # Middle region with high pressure
+            U[0][i] = 1.0       # rho = 1.0
+            U[1][i] = 0.0       # momentum = rho * u = 1.0 * 0 = 0
+            U[2][i] = 1.0 / (gamma - 1)  # energy, using p=1.0
+        else:                     # Outer regions with low pressure
+            U[0][i] = 0.125     # rho = 0.125
+            U[1][i] = 0.0       # momentum = rho * u = 0.125 * 0 = 0
+            U[2][i] = 0.1 / (gamma - 1)  # energy, using p=0.1
+
+    return U
+
+
 
 def calc_p (gamma, rho_E, m, rho):
     '''
@@ -95,20 +120,21 @@ def assemble_standard_galerkin(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gam
 
     return M, F
 
-def apply_boundary_conditions(U_temp, numnp):
+def apply_boundary_conditions(U_temp, numnp, initial_problem_choice):
     '''
     (input) U tuple: List of solution arrays at specific timestep
     (input) numnp int: Number of nodes
 
     (output) U_temp tuple: U_temp list with applied boundary conditions  
     '''
-    U_temp[0][0] = 1.0  # Homogeneous inflow boundary condition at the first node of each variable
-    U_temp[1][0] = 0.0
-    U_temp[2][0] = 2.5
+    if initial_problem_choice == 1:        
+            U_temp[0][0] = 1.0  # Homogeneous inflow boundary condition at the first node of each variable
+            U_temp[1][0] = 0.0
+            U_temp[2][0] = 2.5
 
-    U_temp[0][numnp-1] = 0.125  # Homogeneous outflow boundary condition at the last node of each variable
-    U_temp[1][numnp-1] = 0
-    U_temp[2][numnp-1] = 0.25
+            U_temp[0][numnp-1] = 0.125  # Homogeneous outflow boundary condition at the last node of each variable
+            U_temp[1][numnp-1] = 0
+            U_temp[2][numnp-1] = 0.25
 
     return U_temp
 
@@ -680,7 +706,7 @@ def plot_entropy_res(variables_tuple, config):
     ax[0, 0].set_xticks([i * 0.1 for i in range(11)])
     ax[0, 0].set_ylabel(r'$\eta$')
     ax[0, 0].set_title(f"Entropy t={config['t_end']}s")
-    ax[0, 0].plot(config['xnode'], variables_tuple[4])
+    ax[0, 0].plot(config['xnode'], variables_tuple[5])
 
 
     # Entropy Flux
@@ -689,7 +715,7 @@ def plot_entropy_res(variables_tuple, config):
     ax[0, 1].set_xticks([i * 0.1 for i in range(11)])
     ax[0, 1].set_ylabel(r'Q')
     ax[0, 1].set_title(f"Entropy Flux t={config['t_end']}s")
-    ax[0, 1].plot(config['xnode'], variables_tuple[5])
+    ax[0, 1].plot(config['xnode'], variables_tuple[6])
 
     # Entropy Residual
     ax[1, 0].set_xlabel('x')
@@ -697,7 +723,7 @@ def plot_entropy_res(variables_tuple, config):
     ax[1, 0].set_xticks([i * 0.1 for i in range(11)])
     ax[1, 0].set_ylabel(r'$\nabla Q$')
     ax[1, 0].set_title(f"Entropy Residual t={config['t_end']}s")
-    ax[1, 0].plot(config['xnode'], variables_tuple[6])
+    ax[1, 0].plot(config['xnode'], variables_tuple[7])
 
     # Entropy Residual
     ax[1, 1].set_xlabel('x')
@@ -705,7 +731,7 @@ def plot_entropy_res(variables_tuple, config):
     ax[1, 1].set_xticks([i * 0.1 for i in range(11)])
     ax[1, 1].set_ylabel(r'$\nu_e$')
     ax[1, 1].set_title(f"Viscosity t={config['t_end']}s")
-    ax[1, 1].plot(config['xnode'], variables_tuple[7])
+    ax[1, 1].plot(config['xnode'], variables_tuple[8])
 
 
     # Save the figure with both plots
@@ -721,46 +747,84 @@ def plot_solution(t_end, variables_tuple , config, analytic, rho_energy_analytic
     else:
         graph_title_c_e = ''
         file_c_e = ''
-    # First row
-    ax[0, 0].set_title(f"Density - t = {t_end}s {graph_title_c_e}")
-    ax[0, 0].plot(config['xnode'], variables_tuple[0][:, config['nstep']], linestyle ="", marker="x")
-    ax[0, 0].plot(config['xnode'], analytic[0].T)
-    ax[0, 0].set_ylabel('rho', fontweight='bold')
-    ax[0, 0].set_xlabel('x', fontweight='bold')
-    ax[0, 0].set_xlim([0.0, 1.05])
-    ax[0, 0].set_xticks([i * 0.1 for i in range(11)])
-    ax[0, 0].set_ylim([-0.05,1.05])
 
+    if config['initial_problem_choice'] == 1:
+            # First row
+            ax[0, 0].set_title(f"Density - t = {t_end}s {graph_title_c_e}")
+            ax[0, 0].plot(config['xnode'], variables_tuple[0][:, config['nstep']], linestyle ="", marker="x")
+            ax[0, 0].plot(config['xnode'], analytic[0].T) 
+            ax[0, 0].set_ylabel('rho', fontweight='bold')
+            ax[0, 0].set_xlabel('x', fontweight='bold')
+            ax[0, 0].set_xlim([0.0, 1.05])
+            ax[0, 0].set_xticks([i * 0.1 for i in range(11)])
+            ax[0, 0].set_ylim([-0.05,1.05])
 
-    ax[0, 1].set_title(f"Velocity - t = {t_end}s {graph_title_c_e}")
-    ax[0, 1].plot(config['xnode'], variables_tuple[1][:, config['nstep']], linestyle ="", marker="x")
-    ax[0, 1].plot(config['xnode'], analytic[1].T)
-    ax[0, 1].set_ylabel('v', fontweight='bold')
-    ax[0, 1].set_xlabel('x', fontweight='bold')
-    ax[0, 1].set_xlim([0.0, 1.05])
-    ax[0, 1].set_xticks([i * 0.1 for i in range(11)])
-    ax[0, 1].set_ylim([-0.05,1.05])
+            ax[0, 1].set_title(f"Velocity - t = {t_end}s {graph_title_c_e}")
+            ax[0, 1].plot(config['xnode'], variables_tuple[1][:, config['nstep']], linestyle ="", marker="x")
+            ax[0, 1].plot(config['xnode'], analytic[1].T)
+            ax[0, 1].set_ylabel('v', fontweight='bold')
+            ax[0, 1].set_xlabel('x', fontweight='bold')
+            ax[0, 1].set_xlim([0.0, 1.05])
+            ax[0, 1].set_xticks([i * 0.1 for i in range(11)])
+            ax[0, 1].set_ylim([-0.05,1.05])
 
-    # Second row
-    ax[1, 0].set_title(f"Pressure - t = {t_end}s {graph_title_c_e}")
-    ax[1, 0].plot(config['xnode'], variables_tuple[2][:, config['nstep']], linestyle ="", marker="x")
-    ax[1, 0].plot(config['xnode'], analytic[2].T)
-    ax[1, 0].set_ylabel('p', fontweight='bold')
-    ax[1, 0].set_xlabel('x', fontweight='bold')
-    ax[1, 0].set_xlim([0.0, 1.05])
-    ax[1, 0].set_xticks([i * 0.1 for i in range(11)])
-    ax[1, 0].set_ylim([-0.05,1.05])
+            # Second row
+            ax[1, 0].set_title(f"Pressure - t = {t_end}s {graph_title_c_e}")
+            ax[1, 0].plot(config['xnode'], variables_tuple[2][:, config['nstep']], linestyle ="", marker="x")
+            ax[1, 0].plot(config['xnode'], analytic[2].T)
+            ax[1, 0].set_ylabel('p', fontweight='bold')
+            ax[1, 0].set_xlabel('x', fontweight='bold')
+            ax[1, 0].set_xlim([0.0, 1.05])
+            ax[1, 0].set_xticks([i * 0.1 for i in range(11)])
+            ax[1, 0].set_ylim([-0.05,1.05])
 
-    ax[1, 1].set_title(f"rho_Energy - t = {t_end}s {graph_title_c_e}")
-    ax[1, 1].plot(config['xnode'], variables_tuple[3][:, config['nstep']], linestyle ="", marker="x")
-    ax[1, 1].plot(config['xnode'], rho_energy_analytic.T)
-    ax[1, 1].set_ylabel('rho_E', fontweight='bold')
-    ax[1, 1].set_xlabel('x', fontweight='bold')
-    ax[1, 1].set_xlim([0.0, 1.05])
-    ax[1, 1].set_xticks([i * 0.1 for i in range(11)])
-    ax[1, 1].set_ylim([-0.10, 3.05])
+            ax[1, 1].set_title(f"rho_Energy - t = {t_end}s {graph_title_c_e}")
+            ax[1, 1].plot(config['xnode'], variables_tuple[3][:, config['nstep']], linestyle ="", marker="x")
+            ax[1, 1].plot(config['xnode'], rho_energy_analytic.T)
+            ax[1, 1].set_ylabel('rho_E', fontweight='bold')
+            ax[1, 1].set_xlabel('x', fontweight='bold')
+            ax[1, 1].set_xlim([0.0, 1.05])
+            ax[1, 1].set_xticks([i * 0.1 for i in range(11)])
+            ax[1, 1].set_ylim([-0.10, 3.05])
+            plt.suptitle(f"{config['stabilization_graph_title']} - {config['init_problem_name'][0]}")
+            plt.savefig(f"./{config['folder_path']}/{config['method_file_name']}_t_end={t_end}{file_c_e}_{config['init_problem_name'][0]}.png")
 
-    plt.suptitle(f"{config['stabilization_graph_title']}")
-    plt.savefig(f"./{config['folder_path']}/{config['method_file_name']}_t_end={t_end}{file_c_e}.png")
+    elif config['initial_problem_choice'] == 2:
+            # First row
+            ax[0, 0].set_title(f"Density - t = {t_end}s {graph_title_c_e}")
+            ax[0, 0].plot(config['xnode'], variables_tuple[0][:, config['nstep']], linestyle ="", marker="x")
+            ax[0, 0].set_ylabel('rho', fontweight='bold')
+            ax[0, 0].set_xlabel('x', fontweight='bold')
+            ax[0, 0].set_xlim([1.0, 2.05])
+            ax[0, 0].set_xticks([(i * 0.1) + 1 for i in range(11)])
+            ax[0, 0].set_ylim([-0.05,1.05])
+
+            ax[0, 1].set_title(f"Velocity - t = {t_end}s {graph_title_c_e}")
+            ax[0, 1].plot(config['xnode'], variables_tuple[1][:, config['nstep']], linestyle ="", marker="x")
+            ax[0, 1].set_ylabel('v', fontweight='bold')
+            ax[0, 1].set_xlabel('x', fontweight='bold')
+            ax[0, 1].set_xlim([1.0, 2.05])
+            ax[0, 1].set_xticks([(i * 0.1) + 1 for i in range(11)])
+            ax[0, 1].set_ylim([-0.05,1.05])
+
+            # Second row
+            ax[1, 0].set_title(f"Pressure - t = {t_end}s {graph_title_c_e}")
+            ax[1, 0].plot(config['xnode'], variables_tuple[2][:, config['nstep']], linestyle ="", marker="x")
+            ax[1, 0].set_ylabel('p', fontweight='bold')
+            ax[1, 0].set_xlabel('x', fontweight='bold')
+            ax[1, 0].set_xlim([1.0, 2.05])
+            ax[1, 0].set_xticks([(i * 0.1) + 1 for i in range(11)])
+            ax[1, 0].set_ylim([-0.05,1.05])
+
+            ax[1, 1].set_title(f"Internal energy - t = {t_end}s {graph_title_c_e}")
+            ax[1, 1].plot(config['xnode'], variables_tuple[4][:, config['nstep']], linestyle ="", marker="x")
+            ax[1, 1].set_ylabel('int_e', fontweight='bold')
+            ax[1, 1].set_xlabel('x', fontweight='bold')
+            ax[1, 1].set_xlim([1.0, 2.05])
+            ax[1, 1].set_xticks([(i * 0.1) + 1 for i in range(11)])
+            ax[1, 1].set_ylim([-0.10, 3.25])
+            plt.suptitle(f"{config['stabilization_graph_title']} - {config['init_problem_name'][1]}")
+            plt.savefig(f"./{config['folder_path']}/{config['method_file_name']}_t_end={t_end}{file_c_e}_{config['init_problem_name'][1]}.png")
+
     plt.close()
 

@@ -189,6 +189,7 @@ $$
 M U_t = F + F_{visc} + F_{LPS}
 $$
 
+
 **OVERALL**: The LPS method stabilizes the solution by filtering out oscillations in the gradient. It compares the true gradient $U_x$ with a smoothed gradient $g_h$. The difference between these two is controlled by the stabilization parameter $v_{LPS,e}$ which ensures that overly sharp changes that result in numerical issues are penalized and smoothed out.
 
 
@@ -198,7 +199,7 @@ I first started off applying the standard galerkin for space and the RK4 time di
 
 <br>
 <div>
-    <img src="./RK4_standard_galerkin/RK4_galerkin_t_end=0.2.png" alt="RK4 standard galerkin plots at t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
+    <img src="./RK4_standard_galerkin/RK4_galerkin_t_end=0.2_shock.png" alt="RK4 standard galerkin plots at t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
 </div>
 <br>
 
@@ -206,7 +207,7 @@ Thereafter a one-step Taylor Galerkin of order 2 was employed, which indeed didn
 
 <br>
 <div>
-    <img src="./TG2_one_step/TG2_one_step_t_end=0.2.png" alt="TG2 one-step plots at t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
+    <img src="./TG2_one_step/TG2_one_step_t_end=0.2_shock.png" alt="TG2 one-step plots at t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
 </div>
 <br>
 
@@ -214,7 +215,7 @@ Following this a two-step Taylor Galerkin of order 2 was employed, significantly
 
 <br>
 <div>
-    <img src="./TG2_two_step/TG2_two_step_t_end=0.2.png" alt="TG2 two-step t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
+    <img src="./TG2_two_step/TG2_two_step_t_end=0.2_shock.png" alt="TG2 two-step t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
 </div>
 <br>
 
@@ -223,30 +224,23 @@ The next idea was to combine two-step Taylor Galerkin order 2 with a RK4 time st
 
 <br>
 <div>
-    <img src="./RK4_TG2_two_step/RK4_TG2_two_step_t_end=0.2.png" alt="RK4 TG2 two-step t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
+    <img src="./RK4_TG2_two_step/RK4_TG2_two_step_t_end=0.2_shock.png" alt="RK4 TG2 two-step t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
 </div>
 <br>
 
-Following the next idea was to combine the RK4 TG2 two-step with Entropy viscosity! A greatly improved shock capture, however at points I believe it to be over-diffusive when the tunable constant c_e = 1:
+Following the next idea was to combine the RK4 TG2 two-step with Entropy viscosity! A greatly improved shock capture (tunable constant c_e = 0.4):
 
 <br>
 <div>
-    <img src="./RK4_TG2_two_step_EV/RK4_TG2_two_step_EV_t_end=0.2_c_e=1.png" alt="RK4 TG2 two-step t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
+    <img src="./RK4_TG2_two_step_EV/RK4_TG2_two_step_EV_t_end=0.2_c_e=0.4_shock.png" alt="RK4 TG2 two-step t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
 </div>
 <br>
 
-Reducing this tunable constant c_e from =1 to =0.05 we get the following compromise:
-
-<br>
-<div>
-    <img src="./RK4_TG2_two_step_EV/RK4_TG2_two_step_EV_t_end=0.2_c_e=0.05.png" alt="RK4 TG2 two-step t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
-</div>
-<br>
 
 Thereafter, leaving the TG2 two step method behind, the next idea is to combine the Entropy Viscosity with the LPS projection method. With a tunable constant we get the following promising results:
 
 <br>
 <div>
-    <img src="./RK4_EV_LPS/RK4_EV_LPS_t_end=0.2_c_e=0.4.png" alt="RK4 TG2 two-step t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
+    <img src="./RK4_EV_LPS/RK4_EV_LPS_t_end=0.2_c_e=0.4_shock.png" alt="RK4 TG2 two-step t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
 </div>
 <br>
