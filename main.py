@@ -420,8 +420,6 @@ def run_simulation(config):
             M_g, rhs_tuple = assemble_g_rhs_system(U_temp_stage, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'])
             g_tuple = tuple(solve(M_g, rhs_tuple[var]) for var in range (len(rhs_tuple)))
 
-
-
             # Loop over RK stages
             for s in range(n_stages):
                 # Update U_temp based on previous k values and Butcher tableau coefficients 'a'
@@ -435,7 +433,6 @@ def run_simulation(config):
                 M_tuple, F_tuple, F_visc_tuple, F_lps_tuple = assemble_EV_LPS(U_temp_stage, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'], config['gamma'], config['dt'], config['c_e'], g_tuple)
 
                 k[s] = tuple(config['dt'] * solve(M_tuple[var], (F_tuple[var] + F_visc_tuple[var] + F_lps_tuple[var])) for var in range(len(U_temp)))
-
 
 
             for var in range(len(config['U'])):

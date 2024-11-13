@@ -30,7 +30,8 @@ def U_init_shock_tube(xnode, numnp):
 
 
 def U_init_explosion(xnode, numnp, gamma=1.4):
-    '''Initial condition for a 1D explosion problem with high pressure in the middle.
+    '''
+    Initial condition for a 1D explosion problem with high pressure in the middle.
     (input) xnode arr: Array with x values stored 
     (input) numnp int: Number of nodes
     (input) gamma float: Ratio of specific heats
@@ -51,6 +52,25 @@ def U_init_explosion(xnode, numnp, gamma=1.4):
             U[2][i] = 0.1 / (gamma - 1)  # energy, using p=0.1
 
     return U
+
+def phi_init(xnode, numnp):
+    '''
+    Initial condition of scalar transport term
+    (input) xnode arr: Array with x values stored
+    (input) numnp int: Number of nodes
+
+    (output) phi array: Phi array stores initial conditions for the variable to be transportede
+    '''
+
+    phi = np.zeros(numnp)
+
+    for i in range(numnp):
+        if 0<= xnode[i] <= 0.5:
+            phi[i] = 25
+        else:
+            phi[i] = 12.5
+
+    return phi
 
 
 
@@ -595,6 +615,47 @@ def assemble_EV_LPS(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt, c_e
 
     return M, F, F_visc, F_lps
 
+def assemble_transport(U_current, phi_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma):
+    '''
+    (input) U_current tuple: current solution tuple
+    (input) numel int: number of elements
+    (input) xnode arr: Array with x values stored
+    (input) N_mef arr: Array with the shape function 
+    (input) Nxi_mef arr: Array with shape function derivatives
+    (input) wpg arr: Array with weights 
+    (input) gamma float: Ratio of Cv/Cp (7/5 for ideal gas)
+    
+    (output) F_phi arr: RHS matrix for solving scalar transport 
+    '''
+    numnp = numel + 1
+
+    F_phi = np.zeros(numnp)
+
+    for i in range(numel):
+        h = xnode[i + 1] - xnode[i]
+        weight = wpg * h / 2
+        isp = [i, i + 1]  # Global number of the nodes of the current element
+
+        # Get value of each variable at current element  
+        rho_el, m_el =  U_current[0][isp], U_current[1][isp]
+        phi_el = phi_current[isp]
+
+        u_el = m_el/rho_el
+
+        ngaus = wpg.shape[0]
+        for ig in range(ngaus):
+            N = N_mef[ig, :]
+            Nx = Nxi_mef[ig, :] * 2 / h
+            w_ig = weight[ig]
+
+            rho_gp = np.dot(N, rho_el)
+            phi_gp = np.dot(N, phi_el)
+            u_gp = np.dot(N, u_el)
+
+            F_phi[isp] += Nx * u_gp * rho_gp * phi_gp
+
+    return F_phi            
+
 def initialize_matrices(numnp):
     M_rho, M_m, M_rho_E = np.zeros((numnp, numnp)), np.zeros((numnp, numnp)), np.zeros((numnp, numnp))
     F_rho, F_m, F_rho_E = np.zeros(numnp), np.zeros(numnp), np.zeros(numnp)
@@ -634,6 +695,9 @@ def flux_inter_gaussian_values(rho_inter, m_inter, rho_E_inter, p_inter):
     F_m_inter = m_inter**2/ rho_inter + p_inter
     F_rho_E_inter = (m_inter * (rho_E_inter + p_inter)/ rho_inter)
     return F_rho_inter, F_m_inter, F_rho_E_inter
+
+
+
 
 ## ANALYTIC CALCULATION FUNCTIONS
 def f(P, pL, pR, cL, cR, gamma):
