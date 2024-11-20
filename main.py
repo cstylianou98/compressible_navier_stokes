@@ -6,49 +6,43 @@ import matplotlib.pyplot as plt
 from scipy.linalg import solve
 
 
+def get_valid_choice(prompt, valid_choices):
+    choice = int(input(prompt))
+    while choice not in valid_choices:
+        print(f"\n>>> Invalid choice. Please choose from {valid_choices}.")
+        choice = int(input(prompt))
+    return choice
+
 def configure_simulation():
-    
-     initial_problem_choice = int(input(
+    initial_problem_prompt = (
         "\n>>> Please choose your initial condition problem. \n"
         "1. Shock tube initial conditions \n"
         "2. Explosion initial conditions \n"
-        "\n Type your choice here -----> "
-     )) 
+        "\nType your choice here -----> "
+    )
+    
+    stabilization_choice_prompt = (
+        "\n>>> Please choose your numerical scheme. \n"
+        "1. RK4 with Standard Galerkin \n"
+        "2. Taylor Galerkin (TG2) One-Step \n"
+        "3. Taylor Galerkin (TG2) Two-Step \n"
+        "4. RK4 with Taylor Galerkin Two-Step \n"
+        "5. RK4 with Taylor Galerkin Two-Step and EV stabilization \n"
+        "6. RK4 with EV and LPS stabilization \n"
+        "\nType your choice here -----> "
+    )
 
-     while initial_problem_choice not in [1, 2]:
-          print ("\n>>> Invalid choice. Please type an appropriate integer (1, 2) for the relevant initial condition choice.")
-          initial_problem_choice = int(input(
-            "\n>>> Please choose your initial condition problem. \n"
-            "1. Shock tube initial conditions \n"
-            "2. Explosion initial conditions \n"
-            "\n Type your choice here -----> "
-     )) 
+    # Get valid initial problem choice
+    initial_problem_choice = get_valid_choice(initial_problem_prompt, [1, 2])
 
+    # Get the last timestep
+    t_end = float(input("\n>>> Input the last timestep (s) -----> "))
 
-     t_end = float(input("\n>>> Input the last timestep (s) -----> "))
-     stabilization_choice = int(input(
-          "\n>>> Please choose your numerical scheme. \n"
-          "1. RK4 with Standard Galerkin \n"
-          "2. Taylor Galerkin (TG2) One-Step \n"
-          "3. Taylor Galerkin (TG2) Two-Step \n"
-          "4. RK4 with Taylor Galerkin Two-Step \n"
-          "5. RK4 with Taylor Galerkin Two-Step and EV stabilization \n"
-          "6. RK4 with EV and LPS stabilization \n"
-          "\nType your choice here -----> "
-     ))
+    # Get valid stabilization choice
+    stabilization_choice = get_valid_choice(stabilization_choice_prompt, [1, 2, 3, 4, 5, 6])
 
-     while stabilization_choice not in [1, 2, 3, 4, 5, 6]:
-          print ("\n>>> Invalid choice. Please type an appropriate integer (1, 2, 3, 4, 5, 6) for the relevant numerical scheme choice.")
-          stabilization_choice = int(input(
-          "1. RK4 with Standard Galerkin \n"
-          "2. Taylor Galerkin (TG2) One-Step \n"
-          "3. Taylor Galerkin (TG2) Two-Step \n"
-          "4. RK4 with Taylor Galerkin (TG2) Two-Step \n"
-          "5. RK4 with Taylor Galerkin Two-Step and EV stabilization \n"
-          "6. RK4 with EV and LPS stabilization \n"
-          "\nType your choice here -----> "
-          ))
-     return t_end, stabilization_choice, initial_problem_choice
+    return t_end, stabilization_choice, initial_problem_choice
+
 
 # Setup and initialization
 def setup_simulation(t_end, stabilization_choice, initial_problem_choice):
@@ -60,48 +54,28 @@ def setup_simulation(t_end, stabilization_choice, initial_problem_choice):
     methods_file_name = ['RK4_galerkin', 'TG2_one_step', 'TG2_two_step', 'RK4_TG2_two_step', 'RK4_TG2_two_step_EV', 'RK4_EV_LPS']
     init_problem_name = ['shock', 'explosion']
 
-    if stabilization_choice == 1:
-         stabilization_graph_title = stabilization_graph_titles[0]
-         folder_path = folder_paths[0]
-         file_name = file_names[0]
-         method_file_name = methods_file_name[0]
-         dt = 1.5*10**(-3) 
 
+    # Create a dictionary to map stabilization_choice to corresponding values
+    stabilization_map = {
+        1: {'title': stabilization_graph_titles[0], 'path': folder_paths[0], 'file': file_names[0], 'method': methods_file_name[0]},
+        2: {'title': stabilization_graph_titles[1], 'path': folder_paths[1], 'file': file_names[1], 'method': methods_file_name[1]},
+        3: {'title': stabilization_graph_titles[2], 'path': folder_paths[2], 'file': file_names[2], 'method': methods_file_name[2]},
+        4: {'title': stabilization_graph_titles[3], 'path': folder_paths[3], 'file': file_names[3], 'method': methods_file_name[3]},
+        5: {'title': stabilization_graph_titles[4], 'path': folder_paths[4], 'file': file_names[4], 'method': methods_file_name[4]},
+        6: {'title': stabilization_graph_titles[5], 'path': folder_paths[5], 'file': file_names[5], 'method': methods_file_name[5]}
+    }
 
-    elif stabilization_choice == 2:
-         stabilization_graph_title = stabilization_graph_titles[1]
-         folder_path = folder_paths[1]
-         file_name = file_names[1]
-         method_file_name = methods_file_name[1]
-         dt = 1.5*10**(-3) 
-   
-    elif stabilization_choice == 3:
-         stabilization_graph_title = stabilization_graph_titles[2]
-         folder_path = folder_paths[2]
-         file_name = file_names[2]
-         method_file_name = methods_file_name[2]
-         dt = 1.5*10**(-3) 
+    # Use the stabilization_choice to retrieve the necessary parameters
+    if stabilization_choice in stabilization_map:
+        selected_choice = stabilization_map[stabilization_choice]
+        stabilization_graph_title = selected_choice['title']
+        folder_path = selected_choice['path']
+        file_name = selected_choice['file']
+        method_file_name = selected_choice['method']
+        dt = 1.5 * 10**(-3)
+    else:
+        raise ValueError("Invalid stabilization choice")
 
-    elif stabilization_choice == 4:
-         stabilization_graph_title = stabilization_graph_titles[3]
-         folder_path = folder_paths[3]
-         file_name = file_names[3]
-         method_file_name = methods_file_name[3]
-         dt = 1.5*10**(-3)
-
-    elif stabilization_choice == 5:
-         stabilization_graph_title = stabilization_graph_titles[4]
-         folder_path = folder_paths[4]
-         file_name = file_names[4]
-         method_file_name = methods_file_name[4]
-         dt = 1.5*10**(-3)
-
-    elif stabilization_choice == 6:
-         stabilization_graph_title = stabilization_graph_titles[5]
-         folder_path = folder_paths[5]
-         file_name = file_names[5]
-         method_file_name = methods_file_name[5]
-         dt = 1.5*10**(-3)
 
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
@@ -113,6 +87,7 @@ def setup_simulation(t_end, stabilization_choice, initial_problem_choice):
         numnp = numel + 1
         xnode = np.linspace(0, L, numnp)
         rho_init, m_init, rho_E_init = U_init_shock_tube(xnode, numnp)
+        phi_init = phi_init_shock_tube(xnode, numnp)
     
     elif initial_problem_choice == 2:
         L = 2.0
@@ -120,8 +95,6 @@ def setup_simulation(t_end, stabilization_choice, initial_problem_choice):
         numnp = numel + 1
         xnode = np.linspace(0, L, numnp)
         rho_init, m_init, rho_E_init = U_init_explosion(xnode, numnp)
-
-
 
     gamma = 1.4
     nstep = int(t_end / dt) 
@@ -138,10 +111,13 @@ def setup_simulation(t_end, stabilization_choice, initial_problem_choice):
     U = (np.zeros((numnp, nstep + 1)), 
         np.zeros((numnp, nstep + 1)), 
         np.zeros((numnp, nstep + 1)))
+    phi = np.zeros((numnp, nstep+1))
 
     U[0][:,0] = rho_init
     U[1][:,0] = m_init
     U[2][:,0] = rho_E_init
+
+    phi[:,0] = phi_init
 
     # Get analytical solutions inputs
     U_init_analytical_left = np.array([1.0, 0.0, 1])
@@ -150,7 +126,6 @@ def setup_simulation(t_end, stabilization_choice, initial_problem_choice):
 
     # Entropy viscosity tunable constant
     c_e = 0.4
-
 
     return {
          't_end': t_end,
@@ -174,6 +149,7 @@ def setup_simulation(t_end, stabilization_choice, initial_problem_choice):
          'Nxi_mef': Nxi_mef,
          'wpg': wpg,
          'U': U,
+         'phi': phi,
          'U_init_analytical_left': U_init_analytical_left,
          'U_init_analytical_right': U_init_analytical_right,
          'x0_analytical': x0_analytical,
@@ -454,10 +430,38 @@ def run_simulation(config):
         final_p = calc_p(config['gamma'], config['U'][2], config['U'][1], config['U'][0])
         energy = config['U'][2]
         e_int = final_p/((config['gamma']-1)*rho)
-        # variables_tuple = (rho, vel, final_p, energy, entropy, entropy_flux, entropy_res, viscosity_e)
-        variables_tuple = (rho, vel, final_p, energy, e_int)
 
-    return variables_tuple      
+        U_phi = (config['U'][0], config['U'][1], config['U'][2])
+        for n in range (config['nstep']):
+            # Initialize U_temp and k for the RK stages
+            phi_temp = config['phi'][:, n]
+            k = [None] * n_stages
+
+             # Loop over RK stages
+            for s in range(n_stages):
+                # Update U_temp based on previous k values and Butcher tableau coefficients 'a'
+                if s == 0:
+                    phi_temp_stage = phi_temp  # k1 doesn't involve any manipulation to phi_temp
+                else:
+                    phi_temp_stage = phi_temp + sum(a[s][j] * k[j] for j in range(s))
+
+                U_current_phi = (U_phi[0][:,n], U_phi[1][:,n], U_phi[2][:,n])
+
+                phi_temp_stage = apply_boundary_conditions_phi(phi_temp_stage,  config['numnp'])
+
+                M_phi, F_phi = assemble_transport(U_current_phi, phi_temp_stage, config['numel'], config['xnode'], config['N_mef'], config['Nxi_mef'], config['wpg'])
+
+                k[s] = (config['dt'] * solve(M_phi, F_phi))
+
+            config['phi'][:, n + 1] = config['phi'][:, n] + sum(w[s] * k[s] for s in range(n_stages))
+
+            config['phi'][0, n+1] = 1.0
+            config['phi'][config['numnp']-1, n+1] = 0.0
+
+        phi_transported  = config['phi']
+        variables_tuple = (rho, vel, final_p, energy, e_int, phi_transported)
+
+    return variables_tuple     
 
     
 # Main Execution
@@ -470,6 +474,9 @@ def main():
 
     if config['stabilization_choice'] == 5:
         plot_entropy_res(variables_tuple, config)
+
+    if config['stabilization_choice'] == 6:
+        plot_phi_trans(variables_tuple, config)
 
 if __name__ == "__main__":
     main()

@@ -53,7 +53,7 @@ def U_init_explosion(xnode, numnp, gamma=1.4):
 
     return U
 
-def phi_init(xnode, numnp):
+def phi_init_shock_tube(xnode, numnp):
     '''
     Initial condition of scalar transport term
     (input) xnode arr: Array with x values stored
@@ -63,12 +63,16 @@ def phi_init(xnode, numnp):
     '''
 
     phi = np.zeros(numnp)
+    
+    conc_left = 1.0
+    conc_right = 0.1
 
     for i in range(numnp):
-        if 0<= xnode[i] <= 0.5:
-            phi[i] = 25
-        else:
-            phi[i] = 12.5
+
+        if xnode[i] < 0.5:
+            phi[i] = conc_left
+        elif xnode[i] >= 0.5:
+            phi[i] = conc_right
 
     return phi
 
@@ -157,6 +161,13 @@ def apply_boundary_conditions(U_temp, numnp, initial_problem_choice):
             U_temp[2][numnp-1] = 0.25
 
     return U_temp
+
+def apply_boundary_conditions_phi(phi_temp, numnp):
+    
+    phi_temp[0] = 1.0
+    phi_temp[numnp-1] = 0.1
+
+    return phi_temp
 
 def compute_jacobian (rho, m, rho_E, gamma):
     '''
@@ -615,7 +626,7 @@ def assemble_EV_LPS(U_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma, dt, c_e
 
     return M, F, F_visc, F_lps
 
-def assemble_transport(U_current, phi_current, numel, xnode, N_mef, Nxi_mef, wpg, gamma):
+def assemble_transport(U_current, phi_current, numel, xnode, N_mef, Nxi_mef, wpg):
     '''
     (input) U_current tuple: current solution tuple
     (input) numel int: number of elements
@@ -629,6 +640,7 @@ def assemble_transport(U_current, phi_current, numel, xnode, N_mef, Nxi_mef, wpg
     '''
     numnp = numel + 1
 
+    M_phi = np.zeros((numnp, numnp))
     F_phi = np.zeros(numnp)
 
     for i in range(numel):
@@ -652,9 +664,13 @@ def assemble_transport(U_current, phi_current, numel, xnode, N_mef, Nxi_mef, wpg
             phi_gp = np.dot(N, phi_el)
             u_gp = np.dot(N, u_el)
 
-            F_phi[isp] += Nx * u_gp * rho_gp * phi_gp
+            M_phi[np.ix_(isp, isp)] += w_ig * np.outer(N, N)
+            F_phi[isp] += w_ig * Nx * u_gp * rho_gp * phi_gp
 
-    return F_phi            
+    M_phi[0,0] = 1
+    M_phi[-1, -1] = 1
+
+    return M_phi, F_phi            
 
 def initialize_matrices(numnp):
     M_rho, M_m, M_rho_E = np.zeros((numnp, numnp)), np.zeros((numnp, numnp)), np.zeros((numnp, numnp))
@@ -892,3 +908,34 @@ def plot_solution(t_end, variables_tuple , config, analytic, rho_energy_analytic
 
     plt.close()
 
+def plot_phi_trans(variables_tuple, config):
+    # Extract necessary variables
+    x = config['xnode']
+    phi = variables_tuple[5]  # Transported scalar
+    nsteps = config['nstep']
+    dt = config['dt']
+    
+    # Initialize the plot
+    fig, ax = plt.subplots()
+    line, = ax.plot([], [], linestyle="", marker="x")
+    ax.set_xlim(x.min(), x.max())
+    ax.set_ylim(phi.min(), phi.max())
+    ax.set_title("Transported Scalar Over Time", fontweight='bold')
+    ax.set_xlabel('x', fontweight='bold')
+    ax.set_ylabel('phi', fontweight='bold')
+    
+    # Update function for the animation
+    def update(frame):
+        line.set_data(x, phi[:, frame])
+        ax.set_title(f"Transported Scalar - t = {frame * dt:.3f}s", fontweight='bold')
+        return line,
+    
+    # Create the animation
+    anim = FuncAnimation(
+        fig, update, frames=nsteps, interval=100, blit=True
+    )
+    
+    # Save animation or show it
+    save_path = f"./{config['folder_path']}/{config['method_file_name']}_phi_transport_animation.gif"
+    anim.save(save_path, writer = 'pillow', fps=30)
+    plt.close()

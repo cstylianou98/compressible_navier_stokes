@@ -244,3 +244,40 @@ Thereafter, leaving the TG2 two step method behind, the next idea is to combine 
     <img src="./RK4_EV_LPS/RK4_EV_LPS_t_end=0.2_c_e=0.4_shock.png" alt="RK4 TG2 two-step t=0.2s" style="display: block; margin: 0 auto; width: 60%;">
 </div>
 <br>
+
+## Passive Scalar Transport
+The idea here is to use the solution of the Euler Eq to transport a scalar.
+
+The scalar transport equation is given by the 1D advection equation:
+
+$$
+\int_{\Omega} w \frac{\partial(\rho \phi)}{\partial t} dx + \int_{\Omega} w \frac{\partial (\rho u \phi)}{\partial x} dx = 0
+$$
+
+Integrating by parts:
+
+$$
+\int_{\Omega} w \frac{\partial(\rho \phi)}{\partial t} dx - \int_{\Omega} \frac{\partial w}{\partial x} (\rho u \phi) dx = 0
+$$
+
+Discretizing:
+
+$$
+\sum \int N_A N_B (\rho \phi)_t dx - \sum \int \frac{\partial N_B}{\partial x} (u_{gp} \rho_{gp} \phi_{gp}) dx = 0
+$$
+
+Building the matrices:
+
+$$
+M = \sum \int (N_A N_B) dx
+$$
+
+$$
+F = \sum \int \frac{\partial N_B}{\partial x} (u_{gp} \rho_{gp} \phi_{gp}) dx
+$$
+
+System of equations to be solved **AFTER** Euler is solved:
+
+$$
+M(\rho \phi)^{n+1} = M(\rho \phi)^n + \Delta t F
+$$
